@@ -55,13 +55,10 @@ export function Home() {
         </p>
         <div className="mt-10 flex flex-col sm:flex-row gap-3">
           <Link to="/select" className="btn-primary">
-            GENERATE BATTLE
+            PICK FIGHTERS
           </Link>
           <Link to="/gallery" className="btn-secondary">
             EXPLORE 50 HEROES
-          </Link>
-          <Link to="/tournament" className="btn-secondary">
-            START TOURNAMENT
           </Link>
         </div>
       </section>

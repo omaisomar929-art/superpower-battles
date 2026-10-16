@@ -44,18 +44,12 @@ export function Arena() {
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link to="/select" className="btn-secondary text-xs">
-          RESELECT
+        <Link to="/select" className="btn-primary text-xs">
+          PICK NEW FIGHTERS
         </Link>
         <button type="button" className="btn-secondary text-xs" onClick={rematch}>
           RANDOM REMATCH
         </button>
-        <Link
-          to={`/video?a=${fighterA.id}&b=${fighterB.id}`}
-          className="btn-primary text-xs"
-        >
-          CREATE 30s VIDEO
-        </Link>
       </div>
     </div>
   )

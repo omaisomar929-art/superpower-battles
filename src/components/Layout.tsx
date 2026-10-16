@@ -1,12 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Swords, Users, Trophy, Clapperboard, Home } from 'lucide-react'
+import { Swords, Users, Home } from 'lucide-react'
 
 const links = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/gallery', label: 'Heroes', icon: Users },
   { to: '/select', label: 'Fight', icon: Swords },
-  { to: '/tournament', label: 'Tournament', icon: Trophy },
-  { to: '/video', label: 'Video', icon: Clapperboard },
 ]
 
 export function Layout() {

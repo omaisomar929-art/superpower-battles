@@ -3,7 +3,6 @@ import { HEROES } from '../heroes/data'
 import { calculatePower, comparePowers, explainComparison, formatExpression } from './index'
 import { resolveBattle } from '../battleEngine'
 import { createTournament, fullRosterTournament } from '../tournament'
-import { VIDEO_FPS, VIDEO_DURATION_FRAMES, VIDEO_DURATION_SECONDS } from '../video/constants'
 
 describe('hero roster', () => {
   it('has exactly 50 unique base^exponent combinations', () => {
@@ -89,13 +88,5 @@ describe('tournament', () => {
   it('full roster tournament works', () => {
     const state = fullRosterTournament(32)
     expect(state.champion).not.toBeNull()
-  })
-})
-
-describe('video timing', () => {
-  it('is exactly 900 frames at 30fps for 30 seconds', () => {
-    expect(VIDEO_FPS).toBe(30)
-    expect(VIDEO_DURATION_SECONDS).toBe(30)
-    expect(VIDEO_DURATION_FRAMES).toBe(900)
   })
 })
