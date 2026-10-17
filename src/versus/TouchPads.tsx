@@ -122,15 +122,24 @@ function PlayerPad({
     <div
       className={
         docked
-          ? `pointer-events-auto flex flex-col items-center gap-1 sm:gap-1.5 md:gap-2 ${className}`
-          : `pointer-events-auto absolute flex max-w-[46%] flex-col items-center gap-1.5 sm:max-w-none sm:gap-2 ${className}`
+          ? `versus-pad-root pointer-events-auto flex flex-col items-center gap-1 sm:gap-1.5 md:gap-2 ${
+              stackActions ? 'versus-pad-root--side' : ''
+            } ${className}`
+          : `versus-pad-root pointer-events-auto absolute flex max-w-[46%] flex-col items-center gap-1.5 sm:max-w-none sm:gap-2 ${className}`
       }
       style={{ touchAction: 'none' }}
     >
-      <p className="text-[9px] font-semibold tracking-[0.25em] sm:text-[10px] md:text-xs" style={{ color: accent }}>
+      <p
+        className="versus-pad-label text-[9px] font-semibold tracking-[0.25em] sm:text-[10px] md:text-xs"
+        style={{ color: accent }}
+      >
         {label}
       </p>
-      <div className={stackActions ? 'flex flex-col gap-1.5' : 'flex gap-1.5 sm:gap-2 md:gap-2.5'}>
+      <div
+        className={`versus-pad-actions ${
+          stackActions ? 'flex flex-col gap-1.5' : 'flex gap-1.5 sm:gap-2 md:gap-2.5'
+        }`}
+      >
         <ActionBtn
           label="PUNCH"
           ariaLabel={`${label} punch`}
@@ -144,7 +153,7 @@ function PlayerPad({
           onPress={() => onAction(side, 'ability')}
         />
       </div>
-      <div className="grid grid-cols-3 grid-rows-3 gap-1 sm:gap-1.5 md:gap-2">
+      <div className="versus-pad-dirs grid grid-cols-3 grid-rows-3 gap-1 sm:gap-1.5 md:gap-2">
         <span />
         <DirBtn
           label="FLY"

@@ -422,21 +422,21 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
         className="relative flex min-h-0 flex-1 flex-col outline-none"
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
-        {/* HUD — compact on phones, larger on smart boards */}
+        {/* HUD — compact on phones, larger on smart boards; phone-landscape overrides in CSS */}
         <div className="versus-hud mb-1 shrink-0 grid grid-cols-[1fr_auto_1fr] items-start gap-1.5 sm:mb-2 sm:items-center sm:gap-3">
-          <div className="min-w-0">
+          <div className="versus-hud-side min-w-0">
             <p className="versus-key-hint mb-0.5 hidden text-[10px] leading-snug text-sky-300/90 sm:mb-1 md:block">
               WASD · Space fly · T punch · Y ability
             </p>
             <HudBar hero={fighterA} hp={p1.hp} fx={fxA} align="left" label="P1 · LEFT" />
           </div>
-          <div className="text-center px-1">
+          <div className="versus-hud-clock text-center px-1">
             <div className="font-display text-lg text-amber-300 tabular-nums sm:text-2xl md:text-3xl xl:text-4xl">
               {timeLeft}s
             </div>
             <div className="text-[9px] tracking-widest text-slate-500 sm:text-[10px]">VS</div>
           </div>
-          <div className="min-w-0">
+          <div className="versus-hud-side min-w-0">
             <p className="versus-key-hint mb-0.5 hidden text-right text-[10px] leading-snug text-rose-300/90 sm:mb-1 md:block">
               Arrows · ↑ fly · Enter punch · Shift ability
             </p>
@@ -702,9 +702,9 @@ function HudBar({
   label: string
 }) {
   return (
-    <div className={align === 'right' ? 'text-right' : 'text-left'}>
+    <div className={`versus-hud-bar ${align === 'right' ? 'text-right' : 'text-left'}`}>
       <div
-        className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] tracking-widest text-slate-400 sm:text-[10px] md:text-xs"
+        className="versus-hud-names flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] tracking-widest text-slate-400 sm:text-[10px] md:text-xs"
         style={{ justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}
       >
         <span style={{ color: fx.accent }}>{label}</span>
@@ -722,7 +722,7 @@ function HudBar({
           }}
         />
       </div>
-      <div className="mt-0.5 font-mono text-[9px] text-slate-500 sm:text-[10px] md:text-xs">
+      <div className="versus-hud-power mt-0.5 font-mono text-[9px] text-slate-500 sm:text-[10px] md:text-xs">
         <MathExpression base={hero.base} exponent={hero.exponent} power={hero.power} showPower />
       </div>
     </div>

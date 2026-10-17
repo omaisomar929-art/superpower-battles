@@ -122,7 +122,9 @@ button {
 html.versus-fighting,
 body.versus-fighting {
   height: 100%;
+  height: 100svh;
   height: 100dvh;
+  max-height: 100svh;
   max-height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
@@ -132,7 +134,9 @@ body.versus-fighting {
 body.versus-fighting #root,
 body.versus-fighting .app-shell {
   height: 100%;
+  height: 100svh;
   height: 100dvh;
+  max-height: 100svh;
   max-height: 100dvh;
   overflow: hidden;
 }
@@ -208,28 +212,167 @@ body.versus-fighting .app-main {
   }
 }
 
+/*
+ * Phone landscape (flip phone on its side): short height + wide enough.
+ * Side pads left/right so fighters stay fully visible; no bottom dock.
+ * Portrait + smart-board (tall) layouts are unchanged.
+ */
 @media (orientation: landscape) and (max-height: 500px) {
-  .versus-play {
-    padding-top: 0.15rem;
-    padding-bottom: 0.15rem;
+  /* Free vertical space for the stage — rematch overlay still has exit */
+  body.versus-fighting .app-header {
+    display: none;
   }
 
-  .versus-play-chrome h1 {
-    font-size: 1rem;
+  .versus-play {
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    position: relative;
+  }
+
+  /* Title/rules hidden; tiny exit floats over stage (not over HUD/pads) */
+  .versus-play-chrome {
+    display: flex !important;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 0 !important;
+    gap: 0 !important;
+    min-height: 0;
+    position: absolute;
+    top: 1.85rem;
+    right: 7rem;
+    z-index: 30;
+    pointer-events: none;
+  }
+
+  .versus-play-chrome > div {
+    display: none !important;
+  }
+
+  .versus-play-chrome .btn-secondary {
+    pointer-events: auto;
+    padding: 0.18rem 0.4rem;
+    font-size: 0.45rem;
+    letter-spacing: 0.06em;
+    background: rgba(2, 6, 23, 0.75);
+    border-color: rgba(148, 163, 184, 0.35);
+  }
+
+  .versus-arena {
+    gap: 0.15rem !important;
+  }
+
+  .versus-hud {
+    margin-bottom: 0.05rem !important;
+    gap: 0.25rem !important;
+    align-items: center !important;
+  }
+
+  .versus-hud-clock .font-display {
+    font-size: 0.9rem !important;
+    line-height: 1;
+  }
+
+  .versus-hud-clock .text-\[9px\] {
+    font-size: 0.5rem;
+  }
+
+  .versus-hud .versus-key-hint {
+    display: none !important;
+  }
+
+  .versus-hp-track {
+    height: 0.3rem !important;
+    margin-top: 0.1rem !important;
+  }
+
+  .versus-hud-power {
+    display: none;
+  }
+
+  .versus-hud-names {
+    flex-wrap: nowrap !important;
+    gap: 0.2rem !important;
+    font-size: 0.5rem !important;
+    letter-spacing: 0.08em;
+  }
+
+  .versus-hud-names .font-display {
+    font-size: 0.6rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 7rem;
+  }
+
+  /* Stage + side pads in one row — hide bottom dock */
+  .versus-fight-row {
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: 0.2rem !important;
+  }
+
+  .versus-side-pad {
+    display: flex !important;
+    flex: 0 0 auto;
+    width: auto !important;
+    min-width: 0;
+    max-width: 6.5rem;
+    align-items: center !important;
+    justify-content: center;
+    padding-bottom: 0 !important;
+  }
+
+  .versus-pads-dock {
+    display: none !important;
+  }
+
+  .versus-stage-slot {
+    min-height: 0 !important;
+    align-items: center !important;
+  }
+
+  /* Compact controls: actions beside d-pad (short vertical footprint) */
+  .versus-pad-root--side {
+    flex-direction: row !important;
+    flex-wrap: nowrap;
+    align-items: center !important;
+    gap: 0.2rem !important;
+  }
+
+  /* P2: keep d-pad toward the stage (inner edge) */
+  .versus-side-pad--p2 .versus-pad-root--side {
+    flex-direction: row-reverse !important;
+  }
+
+  .versus-pad-root--side .versus-pad-label {
+    display: none;
+  }
+
+  .versus-pad-root--side .versus-pad-actions {
+    gap: 0.15rem !important;
+  }
+
+  .versus-pad-root--side .versus-pad-dirs {
+    gap: 0.12rem !important;
   }
 
   .versus-dir-btn,
   .versus-dir-spacer {
-    width: 2.15rem;
-    height: 2.15rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 0.4rem;
+    font-size: 0.5rem !important;
   }
 
   .versus-action-btn {
-    min-width: 3rem;
-    height: 2.15rem;
-  }
-
-  .versus-stage-slot {
-    min-height: 120px !important;
+    min-width: 2.35rem;
+    height: 1.55rem;
+    padding-left: 0.15rem;
+    padding-right: 0.15rem;
+    font-size: 0.45rem;
+    border-radius: 0.4rem;
+    letter-spacing: 0.03em;
   }
 }
