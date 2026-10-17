@@ -18,6 +18,12 @@ const ARENA_W = 960
 const ARENA_H = 520
 const GROUND_Y = ARENA_H - 72
 const FIGHTER_R = 36
+/** Sprite is 88px tall above feet — keep art inside the visible stage. */
+const SPRITE_H = 88
+const MIN_X = FIGHTER_R
+const MAX_X = ARENA_W - FIGHTER_R
+const MIN_Y = SPRITE_H
+const MAX_Y = GROUND_Y
 const MOVE_SPEED = 280
 const FLY_SPEED = 240
 const GRAVITY = 980
@@ -69,6 +75,16 @@ const P1_KEYS = new Set(['w', 'a', 's', 'd', 't', 'y', ' ', 'arrowup', 'arrowdow
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
+}
+
+/** Keep fighter center + residual velocity inside the visible playfield. */
+function clampFighterToArena(f: FighterState) {
+  f.x = clamp(f.x, MIN_X, MAX_X)
+  f.y = clamp(f.y, MIN_Y, MAX_Y)
+  if (f.x <= MIN_X && f.vx < 0) f.vx = 0
+  if (f.x >= MAX_X && f.vx > 0) f.vx = 0
+  if (f.y <= MIN_Y && f.vy < 0) f.vy = 0
+  if (f.y >= MAX_Y && f.vy > 0) f.vy = 0
 }
 
 function arenaBg(arena: string): string {
@@ -211,6 +227,7 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
       const knock = (kind === 'ability' ? 140 : 70) * (result.blocked ? 0.35 : 1)
       def.vx += Math.sign(dx || atk.facing) * knock
       def.vy -= kind === 'ability' ? 60 : 30
+      clampFighterToArena(def)
       def.stun = HIT_STUN
       def.hitFlash = 0.25
 
@@ -286,6 +303,7 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
         if (now - spaceTapRef.current < 280) {
           p1Ref.current.flying = !p1Ref.current.flying
           if (p1Ref.current.flying) p1Ref.current.vy = -80
+          clampFighterToArena(p1Ref.current)
         }
         spaceTapRef.current = now
       }
@@ -627,10 +645,11 @@ function integrateFighter(
 ) {
   decayTimers(f, dt)
   if (f.stun > 0) {
-    f.x = clamp(f.x + f.vx * dt, FIGHTER_R, ARENA_W - FIGHTER_R)
-    f.y = clamp(f.y + f.vy * dt, FIGHTER_R + 40, GROUND_Y)
+    f.x += f.vx * dt
+    f.y += f.vy * dt
     f.vx *= 0.85
     f.vy *= 0.9
+    clampFighterToArena(f)
     return
   }
 
@@ -673,8 +692,9 @@ function integrateFighter(
     f.vy *= 0.96
   }
 
-  f.x = clamp(f.x + f.vx * dt, FIGHTER_R, ARENA_W - FIGHTER_R)
-  f.y = clamp(f.y + f.vy * dt, FIGHTER_R + 40, GROUND_Y)
+  f.x += f.vx * dt
+  f.y += f.vy * dt
+  clampFighterToArena(f)
 
   if (f.y >= GROUND_Y - 0.5) {
     f.y = GROUND_Y
