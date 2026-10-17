@@ -118,11 +118,37 @@ button {
   color: #e2e8f0;
 }
 
-/* 2P arena — block scroll/zoom while fighting */
+/* 2P arena — lock viewport, free stage height, safe areas */
+html.versus-fighting,
 body.versus-fighting {
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: none;
+}
+
+body.versus-fighting #root,
+body.versus-fighting .app-shell {
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+body.versus-fighting .app-footer {
+  display: none;
+}
+
+body.versus-fighting .app-header .mx-auto {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+body.versus-fighting .app-main {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .versus-arena,
@@ -133,18 +159,77 @@ body.versus-fighting {
   user-select: none;
 }
 
+.versus-dir-btn,
+.versus-dir-spacer {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.versus-action-btn {
+  min-width: 3.6rem;
+  height: 2.75rem;
+}
+
 .versus-touch-btn:active {
   transform: scale(0.94);
   filter: brightness(1.15);
 }
 
-@media (orientation: landscape) and (max-height: 500px) {
-  .versus-play {
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
+/* Phone portrait — usable pads, stage keeps fighters */
+@media (max-width: 640px) {
+  .versus-dir-btn,
+  .versus-dir-spacer {
+    width: 2.35rem;
+    height: 2.35rem;
   }
 
-  .versus-touch-btn {
-    min-height: 2.5rem;
+  .versus-action-btn {
+    min-width: 3.25rem;
+    height: 2.5rem;
+  }
+}
+
+/* Smart board / large landscape — bigger targets + HUD */
+@media (min-width: 1280px) and (min-height: 700px) {
+  .versus-dir-btn,
+  .versus-dir-spacer {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  .versus-action-btn {
+    min-width: 5.5rem;
+    height: 3.25rem;
+    font-size: 0.8rem;
+  }
+
+  .versus-pads-dock {
+    padding-bottom: 0.25rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .versus-play {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+  }
+
+  .versus-play-chrome h1 {
+    font-size: 1rem;
+  }
+
+  .versus-dir-btn,
+  .versus-dir-spacer {
+    width: 2.15rem;
+    height: 2.15rem;
+  }
+
+  .versus-action-btn {
+    min-width: 3rem;
+    height: 2.15rem;
+  }
+
+  .versus-stage-slot {
+    min-height: 120px !important;
   }
 }

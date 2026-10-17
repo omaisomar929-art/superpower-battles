@@ -127,7 +127,7 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
 
   return (
     <motion.div
-      className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70 min-h-[420px]"
+      className="relative min-h-[280px] overflow-hidden rounded-2xl border border-white/10 bg-slate-950/70 sm:min-h-[420px] sm:rounded-3xl"
       animate={
         heavyShake
           ? { x: [0, -8, 8, -5, 5, -3, 3, 0], y: [0, 4, -4, 3, -2, 0] }

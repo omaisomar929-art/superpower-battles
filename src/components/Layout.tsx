@@ -14,8 +14,8 @@ export function Layout() {
   const { muted, toggleMute } = useSound()
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#050816]/80 backdrop-blur-md">
+    <div className="app-shell flex min-h-[100dvh] flex-col">
+      <header className="app-header sticky top-0 z-40 border-b border-white/10 bg-[#050816]/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <NavLink to="/" className="font-display text-sm sm:text-base tracking-[0.2em] text-sky-300 glow-text">
             POWER BATTLES
@@ -50,10 +50,10 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="flex-1">
+      <main className="app-main flex min-h-0 flex-1 flex-col">
         <Outlet />
       </main>
-      <footer className="border-t border-white/10 px-4 py-4 text-center text-xs text-slate-500">
+      <footer className="app-footer border-t border-white/10 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-xs text-slate-500">
         <p>Math decides the winner. Never random. {TOTAL_HERO_COUNT} original heroes · Made by Yazan Omais</p>
         <p className="mt-1 text-[10px] text-slate-600">Original background music · starts at 0:35</p>
       </footer>

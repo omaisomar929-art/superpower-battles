@@ -33,17 +33,17 @@ export function Arena() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="font-display text-3xl tracking-widest text-sky-300">LEARNING MODE · ARENA</h1>
-      <p className="mt-2 text-slate-400">
+    <div className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-8">
+      <h1 className="font-display text-2xl tracking-widest text-sky-300 sm:text-3xl">LEARNING MODE · ARENA</h1>
+      <p className="mt-2 text-sm text-slate-400 sm:text-base">
         Animated fight sequence. HP bars are presentation only — the math decides the winner.
       </p>
 
-      <div className="mt-6">
+      <div className="mt-4 w-full sm:mt-6">
         <FightSequence fighterA={fighterA} fighterB={fighterB} result={result} arena={arena} />
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-4 flex flex-wrap gap-3 sm:mt-6">
         <Link to="/select" className="btn-primary text-xs">
           BACK TO LEARNING MODE
         </Link>

@@ -12,6 +12,10 @@ type Side = 'p1' | 'p2'
 interface TouchPadsProps {
   onDirChange: (side: Side, dir: Partial<TouchDir>, active: boolean) => void
   onAction: (side: Side, kind: 'punch' | 'ability') => void
+  /** When true, pads sit in chrome beside/below the stage (not overlaying fighters). */
+  docked?: boolean
+  /** Render a single side (smart-board flanks) or both (default phone dock). */
+  side?: Side
 }
 
 function bindHold(
@@ -35,7 +39,46 @@ function bindHold(
   el.addEventListener('lostpointercapture', end)
 }
 
-export function TouchPads({ onDirChange, onAction }: TouchPadsProps) {
+export function TouchPads({ onDirChange, onAction, docked = false, side }: TouchPadsProps) {
+  if (docked && side) {
+    return (
+      <div className="versus-touch-dock pointer-events-none flex w-full justify-center">
+        <PlayerPad
+          side={side}
+          accent={side === 'p1' ? '#38bdf8' : '#fb7185'}
+          docked
+          stackActions
+          className=""
+          onDirChange={onDirChange}
+          onAction={onAction}
+        />
+      </div>
+    )
+  }
+
+  if (docked) {
+    return (
+      <div className="versus-touch-dock pointer-events-none grid w-full grid-cols-2 gap-2 sm:gap-4">
+        <PlayerPad
+          side="p1"
+          accent="#38bdf8"
+          docked
+          className="justify-self-start"
+          onDirChange={onDirChange}
+          onAction={onAction}
+        />
+        <PlayerPad
+          side="p2"
+          accent="#fb7185"
+          docked
+          className="justify-self-end"
+          onDirChange={onDirChange}
+          onAction={onAction}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="versus-touch-layer pointer-events-none absolute inset-0 z-50">
       <PlayerPad
@@ -60,12 +103,16 @@ function PlayerPad({
   side,
   accent,
   className,
+  docked,
+  stackActions,
   onDirChange,
   onAction,
 }: {
   side: Side
   accent: string
   className: string
+  docked?: boolean
+  stackActions?: boolean
   onDirChange: TouchPadsProps['onDirChange']
   onAction: TouchPadsProps['onAction']
 }) {
@@ -73,13 +120,17 @@ function PlayerPad({
 
   return (
     <div
-      className={`pointer-events-auto absolute flex max-w-[46%] flex-col items-center gap-1.5 sm:max-w-none sm:gap-2 ${className}`}
+      className={
+        docked
+          ? `pointer-events-auto flex flex-col items-center gap-1 sm:gap-1.5 md:gap-2 ${className}`
+          : `pointer-events-auto absolute flex max-w-[46%] flex-col items-center gap-1.5 sm:max-w-none sm:gap-2 ${className}`
+      }
       style={{ touchAction: 'none' }}
     >
-      <p className="text-[9px] font-semibold tracking-[0.25em]" style={{ color: accent }}>
+      <p className="text-[9px] font-semibold tracking-[0.25em] sm:text-[10px] md:text-xs" style={{ color: accent }}>
         {label}
       </p>
-      <div className="flex gap-1.5 sm:gap-2">
+      <div className={stackActions ? 'flex flex-col gap-1.5' : 'flex gap-1.5 sm:gap-2 md:gap-2.5'}>
         <ActionBtn
           label="PUNCH"
           ariaLabel={`${label} punch`}
@@ -93,7 +144,7 @@ function PlayerPad({
           onPress={() => onAction(side, 'ability')}
         />
       </div>
-      <div className="grid grid-cols-3 grid-rows-3 gap-1 sm:gap-1.5">
+      <div className="grid grid-cols-3 grid-rows-3 gap-1 sm:gap-1.5 md:gap-2">
         <span />
         <DirBtn
           label="FLY"
@@ -108,7 +159,7 @@ function PlayerPad({
           accent={accent}
           onHold={(on) => onDirChange(side, { left: true }, on)}
         />
-        <span className="h-10 w-10 sm:h-11 sm:w-11" aria-hidden />
+        <span className="versus-dir-spacer" aria-hidden />
         <DirBtn
           label="▶"
           ariaLabel={`${label} right`}
@@ -143,7 +194,9 @@ function DirBtn({
     <button
       type="button"
       aria-label={ariaLabel}
-      className={`versus-touch-btn flex h-10 w-10 items-center justify-center rounded-xl border font-bold sm:h-12 sm:w-12 ${label.length > 1 ? 'text-[9px] tracking-wide sm:text-[10px]' : 'text-sm'}`}
+      className={`versus-touch-btn versus-dir-btn flex items-center justify-center rounded-xl border font-bold ${
+        label.length > 1 ? 'text-[9px] tracking-wide sm:text-[10px] md:text-xs' : 'text-sm md:text-base'
+      }`}
       style={{
         touchAction: 'none',
         borderColor: `${accent}77`,
@@ -180,7 +233,7 @@ function ActionBtn({
     <button
       type="button"
       aria-label={ariaLabel}
-      className="versus-touch-btn flex h-11 min-w-[3.6rem] items-center justify-center rounded-2xl border px-2 text-[9px] font-bold tracking-wider sm:h-12 sm:min-w-[4.75rem] sm:px-3 sm:text-[11px]"
+      className="versus-touch-btn versus-action-btn flex items-center justify-center rounded-2xl border px-2 text-[9px] font-bold tracking-wider sm:px-3 sm:text-[11px] md:text-xs"
       style={{
         touchAction: 'none',
         borderColor: `${accent}99`,

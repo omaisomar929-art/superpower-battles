@@ -90,13 +90,15 @@ export function Versus() {
 
   if (inArena && paramA && paramB) {
     return (
-      <div className="versus-play mx-auto max-w-5xl px-2 py-3 sm:px-4 sm:py-6">
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3 sm:mb-4">
-          <div>
-            <h1 className="font-display text-2xl tracking-widest text-amber-300 sm:text-3xl">2 PLAYER</h1>
-            <p className="mt-1 text-sm text-slate-400">Local versus · {VERSUS_RULES_COPY}</p>
+      <div className="versus-play flex h-full min-h-0 flex-1 flex-col px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-[max(0.35rem,env(safe-area-inset-top))] sm:px-4">
+        <div className="versus-play-chrome mb-1 flex shrink-0 flex-wrap items-center justify-between gap-2 sm:mb-2">
+          <div className="min-w-0">
+            <h1 className="font-display text-lg tracking-widest text-amber-300 sm:text-2xl md:text-3xl">
+              2 PLAYER
+            </h1>
+            <p className="mt-0.5 hidden text-sm text-slate-400 sm:block">Local versus · {VERSUS_RULES_COPY}</p>
           </div>
-          <Link to="/versus" className="btn-secondary text-xs">
+          <Link to="/versus" className="btn-secondary shrink-0 text-xs">
             CHANGE FIGHTERS
           </Link>
         </div>

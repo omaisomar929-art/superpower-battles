@@ -14,9 +14,8 @@ import {
 } from './damageRules'
 import { TouchPads, type TouchDir } from './TouchPads'
 import { FLY_SPEED, applyHoldToAscendFlight } from './flightPhysics'
+import { ARENA_H, ARENA_W, computeStageScale } from './stageScale'
 
-const ARENA_W = 960
-const ARENA_H = 520
 const GROUND_Y = ARENA_H - 72
 const FIGHTER_R = 36
 /** Sprite is 88px tall above feet — keep art inside the visible stage. */
@@ -103,7 +102,7 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
   const fxA = useMemo(() => getAbilityFx(fighterA), [fighterA])
   const fxB = useMemo(() => getAbilityFx(fighterB), [fighterB])
   const wrapRef = useRef<HTMLDivElement>(null)
-  const stageRef = useRef<HTMLDivElement>(null)
+  const slotRef = useRef<HTMLDivElement>(null)
   const keysRef = useRef<Set<string>>(new Set())
   const touchP1Ref = useRef<TouchDir>({ ...EMPTY_DIR })
   const touchP2Ref = useRef<TouchDir>({ ...EMPTY_DIR })
@@ -147,11 +146,16 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
   useEffect(() => {
     const prevOverflow = document.body.style.overflow
     const prevTouch = document.body.style.touchAction
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    document.documentElement.classList.add('versus-fighting')
     document.body.classList.add('versus-fighting')
+    document.documentElement.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
     return () => {
+      document.documentElement.classList.remove('versus-fighting')
       document.body.classList.remove('versus-fighting')
+      document.documentElement.style.overflow = prevHtmlOverflow
       document.body.style.overflow = prevOverflow
       document.body.style.touchAction = prevTouch
       touchP1Ref.current = { ...EMPTY_DIR }
@@ -160,11 +164,10 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
   }, [])
 
   useEffect(() => {
-    const el = stageRef.current
+    const el = slotRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
     const update = () => {
-      const w = el.clientWidth
-      setScale(w > 0 ? Math.min(1, w / ARENA_W) : 1)
+      setScale(computeStageScale(el.clientWidth, el.clientHeight))
     }
     update()
     const ro = new ResizeObserver(update)
@@ -401,10 +404,14 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
           ? 'DRAW'
           : null
 
+  const scaledW = ARENA_W * scale
   const scaledH = ARENA_H * scale
 
   return (
-    <div className="versus-arena space-y-3 sm:space-y-4" style={{ touchAction: 'none' }}>
+    <div
+      className="versus-arena flex min-h-0 flex-1 flex-col gap-1.5 sm:gap-2"
+      style={{ touchAction: 'none' }}
+    >
       <div
         ref={wrapRef}
         tabIndex={0}
@@ -412,130 +419,186 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
         aria-label="2 player versus arena"
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="relative outline-none"
+        className="relative flex min-h-0 flex-1 flex-col outline-none"
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
-        {/* HUD */}
-        <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-start gap-2 sm:mb-3 sm:items-center sm:gap-3">
-          <div>
-            <p className="mb-1 text-[10px] leading-snug text-sky-300/90">
+        {/* HUD — compact on phones, larger on smart boards */}
+        <div className="versus-hud mb-1 shrink-0 grid grid-cols-[1fr_auto_1fr] items-start gap-1.5 sm:mb-2 sm:items-center sm:gap-3">
+          <div className="min-w-0">
+            <p className="versus-key-hint mb-0.5 hidden text-[10px] leading-snug text-sky-300/90 sm:mb-1 md:block">
               WASD · Space fly · T punch · Y ability
             </p>
             <HudBar hero={fighterA} hp={p1.hp} fx={fxA} align="left" label="P1 · LEFT" />
           </div>
-          <div className="text-center">
-            <div className="font-display text-xl text-amber-300 tabular-nums sm:text-2xl">{timeLeft}s</div>
-            <div className="text-[10px] tracking-widest text-slate-500">VS</div>
+          <div className="text-center px-1">
+            <div className="font-display text-lg text-amber-300 tabular-nums sm:text-2xl md:text-3xl xl:text-4xl">
+              {timeLeft}s
+            </div>
+            <div className="text-[9px] tracking-widest text-slate-500 sm:text-[10px]">VS</div>
           </div>
-          <div>
-            <p className="mb-1 text-right text-[10px] leading-snug text-rose-300/90">
+          <div className="min-w-0">
+            <p className="versus-key-hint mb-0.5 hidden text-right text-[10px] leading-snug text-rose-300/90 sm:mb-1 md:block">
               Arrows · ↑ fly · Enter punch · Shift ability
             </p>
             <HudBar hero={fighterB} hp={p2.hp} fx={fxB} align="right" label="P2 · RIGHT" />
           </div>
         </div>
 
-        <div
-          ref={stageRef}
-          className="relative mx-auto w-full max-w-[960px] overflow-hidden rounded-2xl border border-white/10 sm:rounded-3xl"
-          style={{ height: scaledH, touchAction: 'none' }}
-        >
-          <motion.div
-            className="relative overflow-hidden"
-            style={{
-              background: arenaBg(arena),
-              width: ARENA_W,
-              height: ARENA_H,
-              transform: `scale(${scale})`,
-              transformOrigin: 'top left',
-            }}
-            animate={shake > 0.4 ? { x: [0, -4, 4, -2, 2, 0], y: [0, 2, -2, 0] } : { x: 0, y: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            {/* Ground line */}
-            <div
-              className="absolute inset-x-0 bottom-0 h-[72px] border-t border-white/10"
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(15,23,42,0.2), rgba(2,6,23,0.85)), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(56,189,248,0.06) 40px, rgba(56,189,248,0.06) 41px)',
-              }}
-            />
-
-            {/* Math / gate readout */}
-            <div className="absolute left-1/2 top-3 z-20 w-[min(90%,420px)] -translate-x-1/2 rounded-xl border border-sky-400/20 bg-black/55 px-3 py-2 text-center text-[11px] text-sky-200/90">
-              <div className="flex justify-center gap-3 font-mono text-xs">
-                <span className="text-sky-300">
-                  <MathExpression base={fighterA.base} exponent={fighterA.exponent} power={fighterA.power} showPower />
-                </span>
-                <span className="text-slate-500">vs</span>
-                <span className="text-rose-300">
-                  <MathExpression base={fighterB.base} exponent={fighterB.exponent} power={fighterB.power} showPower />
-                </span>
-              </div>
-              <p className="mt-1 text-[10px] tracking-wide text-slate-400">{lastGate}</p>
+        {/* Stage + pads: stacked on phones; side-by-side on wide landscape / smart boards */}
+        <div className="versus-fight-row flex min-h-0 w-full flex-1 flex-col gap-1.5 lg:flex-row lg:items-stretch lg:gap-3">
+          {!outcome && (
+            <div className="versus-side-pad versus-side-pad--p1 hidden shrink-0 lg:flex lg:w-[7.5rem] xl:w-36 2xl:w-40 items-end justify-center pb-1">
+              <TouchPads
+                docked
+                side="p1"
+                onDirChange={(side, dir, active) => {
+                  wrapRef.current?.focus()
+                  onTouchDirChange(side, dir, active)
+                }}
+                onAction={(side, kind) => {
+                  wrapRef.current?.focus()
+                  onTouchAction(side, kind)
+                }}
+              />
             </div>
-
-            <FighterSprite hero={fighterA} fx={fxA} state={p1} side="p1" tick={tick} />
-            <FighterSprite hero={fighterB} fx={fxB} state={p2} side="p2" tick={tick} />
-
-            <AnimatePresence>
-              {fxEvents.map((ev) => (
-                <motion.div
-                  key={ev.id}
-                  className="pointer-events-none absolute z-[25] -translate-x-1/2 -translate-y-1/2 font-display text-xs tracking-wider"
-                  style={{ left: ev.x, top: ev.y, color: ev.color, textShadow: `0 0 10px ${ev.color}` }}
-                  initial={{ opacity: 0, scale: 0.6, y: 8 }}
-                  animate={{ opacity: 1, scale: 1.1, y: -12 }}
-                  exit={{ opacity: 0 }}
-                >
-                  {ev.label.toUpperCase()}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            <AnimatePresence>
-              {outcome && (
-                <motion.div
-                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/75 px-4 text-center"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  <div className="font-display text-3xl text-amber-300">
-                    {outcome === 'draw' ? 'SPECTACULAR DRAW' : `WINNER: ${winnerLabel}`}
-                  </div>
-                  <p className="mt-2 max-w-md text-sm text-slate-300">
-                    {fighterA.expression}={fighterA.power} vs {fighterB.expression}={fighterB.power}
-                    {outcome === 'draw'
-                      ? ' — equal remaining HP (or both zero).'
-                      : ` — ${VERSUS_RULES_COPY}`}
-                  </p>
-                  <div className="mt-6 flex flex-wrap justify-center gap-3">
-                    <button type="button" className="btn-primary text-xs" onClick={onRematch ?? resetMatch}>
-                      REMATCH
-                    </button>
-                    {onExit && (
-                      <button type="button" className="btn-secondary text-xs" onClick={onExit}>
-                        CHANGE FIGHTERS
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-
-          {!focused && !outcome && (
-            <button
-              type="button"
-              className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-4 text-center text-xs tracking-widest text-sky-200 sm:text-sm"
-              onClick={() => wrapRef.current?.focus()}
-            >
-              TAP ARENA FOR KEYBOARD · TOUCH PADS READY
-            </button>
           )}
 
+        {/* Flexible stage slot — measures space; border wraps only the scaled arena */}
+        <div
+          ref={slotRef}
+          className="versus-stage-slot relative flex min-h-[160px] min-w-0 w-full flex-1 items-end justify-center sm:min-h-[200px] lg:items-center"
+          style={{ touchAction: 'none' }}
+        >
+          <div
+            className="relative shrink-0 overflow-hidden rounded-xl border border-white/10 sm:rounded-2xl md:rounded-3xl"
+            style={{ width: scaledW, height: scaledH, touchAction: 'none' }}
+          >
+            {/* Scale on a plain wrapper — Framer Motion x/y would overwrite CSS transform:scale */}
+            <div
+              className="origin-top-left"
+              style={{
+                width: ARENA_W,
+                height: ARENA_H,
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+              }}
+            >
+            <motion.div
+              className="relative overflow-hidden"
+              style={{
+                background: arenaBg(arena),
+                width: ARENA_W,
+                height: ARENA_H,
+              }}
+              animate={shake > 0.4 ? { x: [0, -4, 4, -2, 2, 0], y: [0, 2, -2, 0] } : { x: 0, y: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              <div
+                className="absolute inset-x-0 bottom-0 h-[72px] border-t border-white/10"
+                style={{
+                  background:
+                    'linear-gradient(180deg, rgba(15,23,42,0.2), rgba(2,6,23,0.85)), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(56,189,248,0.06) 40px, rgba(56,189,248,0.06) 41px)',
+                }}
+              />
+
+              <div className="absolute left-1/2 top-3 z-20 w-[min(90%,420px)] -translate-x-1/2 rounded-xl border border-sky-400/20 bg-black/55 px-3 py-2 text-center text-[11px] text-sky-200/90">
+                <div className="flex justify-center gap-3 font-mono text-xs">
+                  <span className="text-sky-300">
+                    <MathExpression base={fighterA.base} exponent={fighterA.exponent} power={fighterA.power} showPower />
+                  </span>
+                  <span className="text-slate-500">vs</span>
+                  <span className="text-rose-300">
+                    <MathExpression base={fighterB.base} exponent={fighterB.exponent} power={fighterB.power} showPower />
+                  </span>
+                </div>
+                <p className="mt-1 text-[10px] tracking-wide text-slate-400">{lastGate}</p>
+              </div>
+
+              <FighterSprite hero={fighterA} fx={fxA} state={p1} side="p1" tick={tick} />
+              <FighterSprite hero={fighterB} fx={fxB} state={p2} side="p2" tick={tick} />
+
+              <AnimatePresence>
+                {fxEvents.map((ev) => (
+                  <motion.div
+                    key={ev.id}
+                    className="pointer-events-none absolute z-[25] -translate-x-1/2 -translate-y-1/2 font-display text-xs tracking-wider"
+                    style={{ left: ev.x, top: ev.y, color: ev.color, textShadow: `0 0 10px ${ev.color}` }}
+                    initial={{ opacity: 0, scale: 0.6, y: 8 }}
+                    animate={{ opacity: 1, scale: 1.1, y: -12 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    {ev.label.toUpperCase()}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {outcome && (
+                  <motion.div
+                    className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/75 px-4 text-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <div className="font-display text-2xl text-amber-300 sm:text-3xl md:text-4xl">
+                      {outcome === 'draw' ? 'SPECTACULAR DRAW' : `WINNER: ${winnerLabel}`}
+                    </div>
+                    <p className="mt-2 max-w-md text-sm text-slate-300">
+                      {fighterA.expression}={fighterA.power} vs {fighterB.expression}={fighterB.power}
+                      {outcome === 'draw'
+                        ? ' — equal remaining HP (or both zero).'
+                        : ` — ${VERSUS_RULES_COPY}`}
+                    </p>
+                    <div className="mt-6 flex flex-wrap justify-center gap-3">
+                      <button type="button" className="btn-primary text-xs" onClick={onRematch ?? resetMatch}>
+                        REMATCH
+                      </button>
+                      {onExit && (
+                        <button type="button" className="btn-secondary text-xs" onClick={onExit}>
+                          CHANGE FIGHTERS
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+            </div>
+
+            {!focused && !outcome && (
+              <button
+                type="button"
+                className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-4 text-center text-xs tracking-widest text-sky-200 sm:text-sm"
+                onClick={() => wrapRef.current?.focus()}
+              >
+                TAP ARENA FOR KEYBOARD · TOUCH PADS READY
+              </button>
+            )}
+          </div>
+        </div>
+
           {!outcome && (
+            <div className="versus-side-pad versus-side-pad--p2 hidden shrink-0 lg:flex lg:w-[7.5rem] xl:w-36 2xl:w-40 items-end justify-center pb-1">
+              <TouchPads
+                docked
+                side="p2"
+                onDirChange={(side, dir, active) => {
+                  wrapRef.current?.focus()
+                  onTouchDirChange(side, dir, active)
+                }}
+                onAction={(side, kind) => {
+                  wrapRef.current?.focus()
+                  onTouchAction(side, kind)
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Bottom pads on phones / tablets — hidden when side pads take over */}
+        {!outcome && (
+          <div className="versus-pads-dock shrink-0 pt-1 sm:pt-2 lg:hidden">
             <TouchPads
+              docked
               onDirChange={(side, dir, active) => {
                 wrapRef.current?.focus()
                 onTouchDirChange(side, dir, active)
@@ -545,40 +608,10 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
                 onTouchAction(side, kind)
               }}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Separate control panels — P1 left / P2 right */}
-      <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-sky-400/30 bg-sky-500/10 p-3 text-xs text-slate-200 sm:p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="font-display tracking-widest text-sky-300">PLAYER 1 · LEFT</div>
-            <span className="rounded bg-sky-500/25 px-2 py-0.5 text-[10px] font-semibold text-sky-100">P1</span>
-          </div>
-          <p className="mt-2 leading-relaxed">
-            <span className="font-semibold text-white">WASD</span> ·{' '}
-            <span className="font-semibold text-white">Space</span> fly ·{' '}
-            <span className="font-semibold text-white">T</span> punch ·{' '}
-            <span className="font-semibold text-white">Y</span> ability
-          </p>
-          <p className="mt-1.5 text-[10px] text-sky-200/70">Touch: left d-pad · hold ▲ Fly · Punch · Ability</p>
-        </div>
-        <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-slate-200 sm:p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="font-display tracking-widest text-rose-300">PLAYER 2 · RIGHT</div>
-            <span className="rounded bg-rose-500/25 px-2 py-0.5 text-[10px] font-semibold text-rose-100">P2</span>
-          </div>
-          <p className="mt-2 leading-relaxed">
-            <span className="font-semibold text-white">Arrows</span> ·{' '}
-            <span className="font-semibold text-white">↑</span> fly ·{' '}
-            <span className="font-semibold text-white">Enter</span> punch ·{' '}
-            <span className="font-semibold text-white">Shift</span> ability
-          </p>
-          <p className="mt-1.5 text-[10px] text-rose-200/70">Touch: right d-pad · hold ▲ Fly · Punch · Ability</p>
-        </div>
-        <p className="text-[11px] text-slate-500 sm:col-span-2">{VERSUS_RULES_COPY}</p>
-      </div>
     </div>
   )
 }
@@ -670,13 +703,16 @@ function HudBar({
 }) {
   return (
     <div className={align === 'right' ? 'text-right' : 'text-left'}>
-      <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400" style={{ justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
+      <div
+        className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] tracking-widest text-slate-400 sm:text-[10px] md:text-xs"
+        style={{ justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}
+      >
         <span style={{ color: fx.accent }}>{label}</span>
-        <span className="font-display text-xs" style={{ color: hero.mainColor }}>
+        <span className="font-display text-[11px] sm:text-xs md:text-sm" style={{ color: hero.mainColor }}>
           {hero.name}
         </span>
       </div>
-      <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-slate-800">
+      <div className="versus-hp-track mt-1 h-2 overflow-hidden rounded-full bg-slate-800 sm:h-2.5 md:h-3.5 xl:h-4">
         <div
           className="h-full transition-[width] duration-150"
           style={{
@@ -686,7 +722,7 @@ function HudBar({
           }}
         />
       </div>
-      <div className="mt-0.5 font-mono text-[10px] text-slate-500">
+      <div className="mt-0.5 font-mono text-[9px] text-slate-500 sm:text-[10px] md:text-xs">
         <MathExpression base={hero.base} exponent={hero.exponent} power={hero.power} showPower />
       </div>
     </div>
