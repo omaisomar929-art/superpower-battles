@@ -1,21 +1,59 @@
 /**
- * Original Web Audio synthesis — ambient loop + anime-inspired clash SFX.
- * No copyrighted samples or ripped OST.
- * Marvel’s “Portals” (MCU / Avengers soundtrack) is intentionally NOT included — copyright.
+ * Site audio: original MP3 background music + Web Audio fight SFX.
+ * BGM starts at 30s and loops from 30s → end (never plays the intro).
  */
 
 type FightCue = 'intro' | 'whoosh' | 'impact' | 'blast' | 'clash' | 'reveal' | 'draw'
 
+/** Skip the opening; every play and every loop begins here. */
+export const BGM_LOOP_START_SEC = 30
+
+const BGM_SRC = '/audio/original-bg.mp3'
+const BGM_VOLUME = 0.55
+
 let sharedCtx: AudioContext | null = null
-let ambientNodes: { gain: GainNode; stop: () => void } | null = null
+let bgAudio: HTMLAudioElement | null = null
 let muted = false
 let ambientDesired = true
+let loopHandlerAttached = false
 
 function getCtx(): AudioContext {
   if (!sharedCtx) {
     sharedCtx = new AudioContext()
   }
   return sharedCtx
+}
+
+function getBgAudio(): HTMLAudioElement {
+  if (!bgAudio) {
+    bgAudio = new Audio(BGM_SRC)
+    bgAudio.preload = 'auto'
+    bgAudio.loop = false
+    bgAudio.volume = BGM_VOLUME
+  }
+  if (!loopHandlerAttached) {
+    loopHandlerAttached = true
+    bgAudio.addEventListener('ended', () => {
+      if (!ambientDesired || muted || !bgAudio) return
+      bgAudio.currentTime = BGM_LOOP_START_SEC
+      void bgAudio.play().catch(() => {
+        /* autoplay blocked — wait for next gesture */
+      })
+    })
+  }
+  return bgAudio
+}
+
+function seekToLoopStart(audio: HTMLAudioElement): void {
+  if (audio.currentTime < BGM_LOOP_START_SEC) {
+    audio.currentTime = BGM_LOOP_START_SEC
+  }
+}
+
+function pauseBg(): void {
+  if (bgAudio) {
+    bgAudio.pause()
+  }
 }
 
 export function isMuted(): boolean {
@@ -28,7 +66,7 @@ export function setMuted(value: boolean): void {
     localStorage.setItem('power-battles-muted', value ? '1' : '0')
   }
   if (muted) {
-    stopAmbient()
+    pauseBg()
   } else if (ambientDesired) {
     void startAmbient()
   }
@@ -148,101 +186,45 @@ export function playFightCue(cue: FightCue): void {
   }
 }
 
+/**
+ * Start (or resume) the original MP3 BGM from 30s.
+ * Respects mute; autoplay may require a prior user gesture.
+ */
 export async function startAmbient(): Promise<void> {
   ambientDesired = true
   if (muted) return
-  const ctx = getCtx()
-  if (ctx.state === 'suspended') await ctx.resume()
-  if (ambientNodes) return
 
-  const master = ctx.createGain()
-  master.gain.value = 0.04
-  master.connect(ctx.destination)
+  const audio = getBgAudio()
 
-  const oscillators: OscillatorNode[] = []
-  // Deeper drones + a fifth for a richer original pad (still fully procedural)
-  const freqs = [48, 72, 96, 144, 192]
-  freqs.forEach((freq, i) => {
-    const osc = ctx.createOscillator()
-    const lfo = ctx.createOscillator()
-    const lfoGain = ctx.createGain()
-    const gain = ctx.createGain()
-    const filter = ctx.createBiquadFilter()
-    osc.type = i % 2 === 0 ? 'sine' : 'triangle'
-    osc.frequency.value = freq
-    lfo.type = 'sine'
-    lfo.frequency.value = 0.06 + i * 0.025
-    lfoGain.gain.value = 3 + i * 0.8
-    filter.type = 'lowpass'
-    filter.frequency.value = 600 + i * 120
-    gain.gain.value = 0.18 / (i + 1)
-    lfo.connect(lfoGain)
-    lfoGain.connect(osc.frequency)
-    osc.connect(filter)
-    filter.connect(gain)
-    gain.connect(master)
-    osc.start()
-    lfo.start()
-    oscillators.push(osc, lfo)
-  })
+  const playFromLoopStart = async () => {
+    if (muted || !ambientDesired) return
+    seekToLoopStart(audio)
+    try {
+      await audio.play()
+      // Some browsers ignore seek before play; re-assert after play starts.
+      seekToLoopStart(audio)
+    } catch {
+      /* autoplay blocked — SoundProvider unlocks on first gesture */
+    }
+  }
 
-  // Soft pulsing pad
-  const pulse = ctx.createOscillator()
-  const pulseGain = ctx.createGain()
-  pulse.type = 'sine'
-  pulse.frequency.value = 196
-  pulseGain.gain.value = 0.012
-  const pulseLfo = ctx.createOscillator()
-  const pulseLfoGain = ctx.createGain()
-  pulseLfo.frequency.value = 0.12
-  pulseLfoGain.gain.value = 0.01
-  pulseLfo.connect(pulseLfoGain)
-  pulseLfoGain.connect(pulseGain.gain)
-  pulse.connect(pulseGain)
-  pulseGain.connect(master)
-  pulse.start()
-  pulseLfo.start()
-  oscillators.push(pulse, pulseLfo)
-
-  // Slow shimmer (high sine, very quiet)
-  const shimmer = ctx.createOscillator()
-  const shimmerGain = ctx.createGain()
-  const shimmerLfo = ctx.createOscillator()
-  const shimmerLfoGain = ctx.createGain()
-  shimmer.type = 'sine'
-  shimmer.frequency.value = 523.25
-  shimmerGain.gain.value = 0.004
-  shimmerLfo.frequency.value = 0.09
-  shimmerLfoGain.gain.value = 0.003
-  shimmerLfo.connect(shimmerLfoGain)
-  shimmerLfoGain.connect(shimmerGain.gain)
-  shimmer.connect(shimmerGain)
-  shimmerGain.connect(master)
-  shimmer.start()
-  shimmerLfo.start()
-  oscillators.push(shimmer, shimmerLfo)
-
-  ambientNodes = {
-    gain: master,
-    stop: () => {
-      oscillators.forEach((o) => {
-        try {
-          o.stop()
-        } catch {
-          /* already stopped */
-        }
-      })
-      master.disconnect()
-    },
+  if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    await playFromLoopStart()
+  } else {
+    await new Promise<void>((resolve) => {
+      const onMeta = () => {
+        audio.removeEventListener('loadedmetadata', onMeta)
+        void playFromLoopStart().finally(resolve)
+      }
+      audio.addEventListener('loadedmetadata', onMeta)
+      audio.load()
+    })
   }
 }
 
 export function stopAmbient(): void {
   ambientDesired = false
-  if (ambientNodes) {
-    ambientNodes.stop()
-    ambientNodes = null
-  }
+  pauseBg()
 }
 
 export async function ensureAudioUnlocked(): Promise<void> {

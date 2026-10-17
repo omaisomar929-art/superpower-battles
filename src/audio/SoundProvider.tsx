@@ -26,20 +26,22 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   const [muted, setMutedState] = useState(() => loadMutePreference())
 
   useEffect(() => {
-    if (!muted) {
-      const unlock = () => {
-        void ensureAudioUnlocked()
-        window.removeEventListener('pointerdown', unlock)
-        window.removeEventListener('keydown', unlock)
-      }
-      window.addEventListener('pointerdown', unlock)
-      window.addEventListener('keydown', unlock)
-      return () => {
-        window.removeEventListener('pointerdown', unlock)
-        window.removeEventListener('keydown', unlock)
-      }
+    if (muted) return undefined
+
+    // Try immediate play (works if previously unmuted / autoplay allowed).
+    void ensureAudioUnlocked()
+
+    const unlock = () => {
+      void ensureAudioUnlocked()
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
     }
-    return undefined
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
   }, [muted])
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     const next = !isMuted()
     setMuted(next)
     setMutedState(next)
+    // Unmute is always a user gesture — start BGM from 30s reliably.
     if (!next) void startAmbient()
   }
 

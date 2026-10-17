@@ -41,12 +41,8 @@ export function Layout() {
               type="button"
               onClick={toggleMute}
               className="ml-1 inline-flex items-center justify-center rounded-lg border border-white/10 p-2 text-slate-300 transition hover:border-sky-400/40 hover:text-sky-200"
-              aria-label={muted ? 'Unmute original ambient' : 'Mute original ambient'}
-              title={
-                muted
-                  ? 'Unmute — Original ambient (Marvel’s Portals cannot be included — copyright)'
-                  : 'Mute — Original ambient (Marvel’s Portals cannot be included — copyright)'
-              }
+              aria-label={muted ? 'Unmute background music' : 'Mute background music'}
+              title={muted ? 'Unmute background music' : 'Mute background music'}
             >
               {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </button>
@@ -58,9 +54,7 @@ export function Layout() {
       </main>
       <footer className="border-t border-white/10 px-4 py-4 text-center text-xs text-slate-500">
         <p>Math decides the winner. Never random. {TOTAL_HERO_COUNT} original heroes · Made by Yazan Omais</p>
-        <p className="mt-1 text-[10px] text-slate-600">
-          Original ambient — Marvel’s Portals cannot be included (copyright).
-        </p>
+        <p className="mt-1 text-[10px] text-slate-600">Original background music · starts at 0:30</p>
       </footer>
     </div>
   )
