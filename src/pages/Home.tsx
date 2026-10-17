@@ -86,8 +86,8 @@ export function Home() {
         </motion.div>
 
         <p className="mt-6 max-w-xl text-base sm:text-lg text-slate-300">
-          {TOTAL_HERO_COUNT} original heroes — including five null-power void fighters. Higher power wins.
-          Always.
+          {TOTAL_HERO_COUNT} original heroes — including null-base voids (0¹–0⁵) and power-zero void
+          variants (0⁰–10⁰). Higher power wins. Always.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row gap-3">

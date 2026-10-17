@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Hero } from '../heroes/types'
+import { isPowerZeroVoid } from '../heroes/data'
 import { HeroArt } from '../heroes/HeroArt'
 import { formatPower } from '../mathEngine'
 import { MathExpression } from './MathExpression'
@@ -35,7 +36,7 @@ export function HeroCard({ hero, selected, onSelect, compact }: HeroCardProps) {
       </p>
       <p className="text-center text-amber-300 text-xs mt-1">
         POWER {formatPower(hero.power)}
-        {hero.power === 0 ? ' · NULL' : ''}
+        {isPowerZeroVoid(hero) ? ' · VOID 0' : hero.power === 0 ? ' · NULL' : ''}
       </p>
       {!compact && (
         <>

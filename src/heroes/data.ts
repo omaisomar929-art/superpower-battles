@@ -18,6 +18,172 @@ interface HeroSeed {
 }
 
 const NAMES: Record<string, HeroSeed> = {
+  // ── Power-zero void variants (exponent 0 → game power 0) ──
+  '0-0': {
+    name: 'Origin Void',
+    costume: 'Featureless black shell with a broken superscript zero',
+    signatureAttack: 'Undefined Collapse',
+    defensiveAbility: 'Axiom Null',
+    fightingStyle: 'mystic',
+    victoryAnimation: 'erases the proof that anything existed',
+    defeatAnimation: 'flickers between defined and gone',
+    visualEffect: 'undefined glyph sparks',
+    mainColor: '#94a3b8',
+    secondaryColor: '#1e293b',
+    accentColor: '#020617',
+    visuals: { silhouette: 'robe', weapon: 'orb', mask: 'hood', cape: true, horns: false, aura: 'void' },
+    tagline: 'Zero to the zeroth — the void that math refuses to name.',
+  },
+  '1-0': {
+    name: 'Unit Hollow',
+    costume: 'White outline suit with an empty superscript halo',
+    signatureAttack: 'Identity Drain',
+    defensiveAbility: 'One-to-None',
+    fightingStyle: 'acrobat',
+    victoryAnimation: 'becomes a single hollow numeral then vanishes',
+    defeatAnimation: 'outline folds into a blank page',
+    visualEffect: 'hollow unit sparks',
+    mainColor: '#e2e8f0',
+    secondaryColor: '#64748b',
+    accentColor: '#0f172a',
+    visuals: { silhouette: 'nimble', weapon: 'fists', mask: 'none', cape: false, horns: false, aura: 'void' },
+    tagline: 'One to the zeroth — a unit reduced to null power.',
+  },
+  '2-0': {
+    name: 'Binary Silence',
+    costume: 'Split black/white void armor with muted dual blades',
+    signatureAttack: 'Bit Wipe',
+    defensiveAbility: 'Parity Void',
+    fightingStyle: 'assassin',
+    victoryAnimation: 'both bits drop to zero and the arena goes quiet',
+    defeatAnimation: 'binary trails fade to static',
+    visualEffect: 'silent bit flakes',
+    mainColor: '#cbd5e1',
+    secondaryColor: '#334155',
+    accentColor: '#020617',
+    visuals: { silhouette: 'nimble', weapon: 'blade', mask: 'half', cape: false, horns: false, aura: 'shadow' },
+    tagline: 'Two to the zeroth — twin edges with no force.',
+  },
+  '3-0': {
+    name: 'Triad Null',
+    costume: 'Gold triangle crest drained to ash-metal',
+    signatureAttack: 'Apex Fade',
+    defensiveAbility: 'Empty Triangle',
+    fightingStyle: 'striker',
+    victoryAnimation: 'plants a hollow triangle that casts no shadow',
+    defeatAnimation: 'crest dissolves into three empty points',
+    visualEffect: 'hollow triangle rings',
+    mainColor: '#a8a29e',
+    secondaryColor: '#57534e',
+    accentColor: '#1c1917',
+    visuals: { silhouette: 'armor', weapon: 'spear', mask: 'none', cape: true, horns: false, aura: 'void' },
+    tagline: 'Three to the zeroth — apex without weight.',
+  },
+  '4-0': {
+    name: 'Quad Vacuum',
+    costume: 'Boxy plate armor with four empty corner voids',
+    signatureAttack: 'Corner Erase',
+    defensiveAbility: 'Hollow Bastion',
+    fightingStyle: 'tank',
+    victoryAnimation: 'four corners open into nothing',
+    defeatAnimation: 'walls implode into a flat square',
+    visualEffect: 'collapsing square voids',
+    mainColor: '#94a3b8',
+    secondaryColor: '#475569',
+    accentColor: '#0f172a',
+    visuals: { silhouette: 'armor', weapon: 'shield', mask: 'full', cape: false, horns: false, aura: 'void' },
+    tagline: 'Four to the zeroth — corners holding empty space.',
+  },
+  '5-0': {
+    name: 'Penta Vacuum',
+    costume: 'Crimson lancer gear faded to void-gray with a dead star helm',
+    signatureAttack: 'Pointless Drive',
+    defensiveAbility: 'Star Shell (empty)',
+    fightingStyle: 'striker',
+    victoryAnimation: 'five points light then extinguish at once',
+    defeatAnimation: 'star helm cracks into silent dust',
+    visualEffect: 'dead star bursts',
+    mainColor: '#a1a1aa',
+    secondaryColor: '#52525b',
+    accentColor: '#18181b',
+    visuals: { silhouette: 'cape', weapon: 'spear', mask: 'half', cape: true, horns: false, aura: 'shadow' },
+    tagline: 'Five to the zeroth — a star with no punch.',
+  },
+  '6-0': {
+    name: 'Hexa Null',
+    costume: 'Teal windrunner drained of color, hex plates hollow',
+    signatureAttack: 'Drift Nothing',
+    defensiveAbility: 'Empty Hex Mesh',
+    fightingStyle: 'acrobat',
+    victoryAnimation: 'draws a hex that never fills in',
+    defeatAnimation: 'hex mesh unravels into mist',
+    visualEffect: 'hollow hex trails',
+    mainColor: '#99f6e4',
+    secondaryColor: '#5eead4',
+    accentColor: '#134e4a',
+    visuals: { silhouette: 'nimble', weapon: 'blade', mask: 'visor', cape: false, horns: false, aura: 'void' },
+    tagline: 'Six to the zeroth — a clean hex cut with no force.',
+  },
+  '7-0': {
+    name: 'Septim Hollow',
+    costume: 'Indigo duelist coat with seven blank button sockets',
+    signatureAttack: 'Unlucky Silence',
+    defensiveAbility: 'Fortune Void',
+    fightingStyle: 'assassin',
+    victoryAnimation: 'seven sparks appear and refuse to ignite',
+    defeatAnimation: 'coat buttons stay empty forever',
+    visualEffect: 'muted lucky sparks',
+    mainColor: '#c4b5fd',
+    secondaryColor: '#6b7280',
+    accentColor: '#1e1b4b',
+    visuals: { silhouette: 'cloak', weapon: 'blade', mask: 'half', cape: true, horns: false, aura: 'void' },
+    tagline: 'Seven to the zeroth — edged luck with null power.',
+  },
+  '8-0': {
+    name: 'Octa Hollow',
+    costume: 'Steel octagon knight with a shield that casts no force',
+    signatureAttack: 'Oct Whisper',
+    defensiveAbility: 'Paper Octagon',
+    fightingStyle: 'guardian',
+    victoryAnimation: 'locks an eight-sided dome of silence',
+    defeatAnimation: 'octagon vertices blink out',
+    visualEffect: 'hollow octagon plates',
+    mainColor: '#93c5fd',
+    secondaryColor: '#64748b',
+    accentColor: '#0f172a',
+    visuals: { silhouette: 'armor', weapon: 'shield', mask: 'visor', cape: false, horns: false, aura: 'void' },
+    tagline: 'Eight to the zeroth — eight sides, zero force.',
+  },
+  '9-0': {
+    name: 'Nona Hollow',
+    costume: 'Amber gymnast suit desaturated to ash with a blank sash',
+    signatureAttack: 'Sparkless Flip',
+    defensiveAbility: 'Empty Bind',
+    fightingStyle: 'acrobat',
+    victoryAnimation: 'lands a nine-point pose that makes no sound',
+    defeatAnimation: 'sash hangs limp and gray',
+    visualEffect: 'ash stripe afterimages',
+    mainColor: '#d6d3d1',
+    secondaryColor: '#78716c',
+    accentColor: '#1c1917',
+    visuals: { silhouette: 'nimble', weapon: 'fists', mask: 'none', cape: false, horns: false, aura: 'void' },
+    tagline: 'Nine to the zeroth — bright nine, null power.',
+  },
+  '10-0': {
+    name: 'Deca Null',
+    costume: 'Black-and-gold boxing armor with a scoreboard stuck on 0',
+    signatureAttack: 'Perfect Zero Punch',
+    defensiveAbility: 'Count Void',
+    fightingStyle: 'striker',
+    victoryAnimation: 'raises gloves as a glowing 0⁰',
+    defeatAnimation: 'scoreboard stays at null forever',
+    visualEffect: 'zero impact bursts',
+    mainColor: '#a8a29e',
+    secondaryColor: '#57534e',
+    accentColor: '#0a0a0a',
+    visuals: { silhouette: 'armor', weapon: 'gauntlets', mask: 'none', cape: false, horns: false, aura: 'void' },
+    tagline: 'Ten to the zeroth — a perfect null.',
+  },
   '0-1': {
     name: 'Null Spark',
     costume: 'Ash-gray void suit with a hollow zero crest',
@@ -882,16 +1048,34 @@ export const HEROES: Hero[] = (() => {
       list.push(buildHero(base, exponent))
     }
   }
-  // Null / void roster: base 0 × exponents 1–5 (power always 0)
+  // Null-base roster: base 0 × exponents 1–5 (power always 0)
   for (let exponent = 1; exponent <= 5; exponent += 1) {
     list.push(buildHero(0, exponent))
+  }
+  // Power-zero void variants: every base 0–10 at exponent 0 (game power 0)
+  for (let base = 0; base <= 10; base += 1) {
+    list.push(buildHero(base, 0))
   }
   return list
 })()
 
+/** Classic fighters: bases 1–10 × exponents 1–5 */
 export const CLASSIC_HERO_COUNT = 50
-export const ZERO_HERO_COUNT = 5
+/** Base-0 fighters with exponents 1–5 (0¹–0⁵) */
+export const NULL_BASE_HERO_COUNT = 5
+/**
+ * Exponent-0 void variants for every base already in the roster (0⁰–10⁰).
+ * Game power is forced to 0 (math would say n⁰=1 for n≠0).
+ */
+export const POWER_ZERO_HERO_COUNT = 11
+/** All non-classic null / void fighters */
+export const ZERO_HERO_COUNT = NULL_BASE_HERO_COUNT + POWER_ZERO_HERO_COUNT
 export const TOTAL_HERO_COUNT = CLASSIC_HERO_COUNT + ZERO_HERO_COUNT
+
+/** True for n⁰ void variants (game power 0 override). */
+export function isPowerZeroVoid(hero: Hero): boolean {
+  return hero.exponent === 0
+}
 
 export function getHeroById(id: string): Hero | undefined {
   return HEROES.find((hero) => hero.id === id)

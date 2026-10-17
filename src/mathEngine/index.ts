@@ -10,6 +10,11 @@ export function toSuperscript(value: number): string {
     .join('')
 }
 
+/**
+ * Game power for a base^exponent pair.
+ * Exponent 0 is a **null-power void** override: always returns 0,
+ * even though mathematics says n⁰ = 1 for n ≠ 0 (and 0⁰ is undefined).
+ */
 export function calculatePower(base: number, exponent: number): number {
   if (!Number.isInteger(base) || !Number.isInteger(exponent)) {
     throw new Error('Base and exponent must be integers')
@@ -17,9 +22,11 @@ export function calculatePower(base: number, exponent: number): number {
   if (base < 0 || base > 10) {
     throw new Error('Base must be between 0 and 10')
   }
-  if (exponent < 1 || exponent > 5) {
-    throw new Error('Exponent must be between 1 and 5')
+  if (exponent < 0 || exponent > 5) {
+    throw new Error('Exponent must be between 0 and 5')
   }
+  // Power-zero void fighters: n⁰ → game power 0 (not mathematical 1)
+  if (exponent === 0) return 0
   return base ** exponent
 }
 

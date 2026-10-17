@@ -4,6 +4,7 @@ import { HEROES, getHeroById, getRandomHeroes } from '../heroes/data'
 import type { Hero } from '../heroes/types'
 import { HeroCard } from '../components/HeroCard'
 import { canFight } from '../battleEngine'
+import { formatExpression } from '../mathEngine'
 
 const ARENAS = [
   { id: 'neon-colosseum', label: 'Neon Colosseum' },
@@ -22,17 +23,23 @@ export function FighterSelect() {
   const [mirrorMode, setMirrorMode] = useState(false)
   const [arena, setArena] = useState(ARENAS[0].id)
   const [query, setQuery] = useState('')
+  const [baseFilter, setBaseFilter] = useState<number | 'all'>('all')
+  const [expFilter, setExpFilter] = useState<number | 'all'>('all')
 
   const list = useMemo(() => {
+    let heroes = [...HEROES]
+    if (baseFilter !== 'all') heroes = heroes.filter((h) => h.base === baseFilter)
+    if (expFilter !== 'all') heroes = heroes.filter((h) => h.exponent === expFilter)
     const q = query.toLowerCase()
-    if (!q) return HEROES
-    return HEROES.filter(
+    if (!q) return heroes
+    return heroes.filter(
       (h) =>
         h.name.toLowerCase().includes(q) ||
         h.expression.includes(q) ||
+        formatExpression(h.base, h.exponent).includes(q) ||
         `${h.base}^${h.exponent}`.includes(q),
     )
-  }, [query])
+  }, [query, baseFilter, expFilter])
 
   function selectHero(hero: Hero) {
     if (picking === 'a') {
@@ -65,7 +72,10 @@ export function FighterSelect() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <h1 className="font-display text-3xl tracking-widest text-fuchsia-300">FIGHTER SELECT</h1>
-      <p className="mt-2 text-slate-400">Pick two heroes. Higher power wins — math never lies.</p>
+      <p className="mt-2 text-slate-400">
+        Pick two heroes. Higher power wins — math never lies. Power-zero void variants (n⁰) have game power
+        0.
+      </p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto_1fr] items-start">
         <div className={`panel rounded-2xl p-4 ${picking === 'a' ? 'ring-2 ring-sky-400' : ''}`}>
@@ -110,12 +120,41 @@ export function FighterSelect() {
         </div>
       </div>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Filter heroes…"
-        className="mt-8 w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm"
-      />
+      <div className="mt-8 flex flex-wrap gap-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Filter heroes…"
+          className="min-w-[180px] flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm"
+        />
+        <select
+          value={baseFilter}
+          onChange={(e) => setBaseFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+          className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm"
+        >
+          <option value="all">All bases</option>
+          {Array.from({ length: 11 }, (_, i) => i).map((b) => (
+            <option key={b} value={b}>
+              Base {b}
+              {b === 0 ? ' (null)' : ''}
+            </option>
+          ))}
+        </select>
+        <select
+          value={expFilter}
+          onChange={(e) => setExpFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+          className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm"
+        >
+          <option value="all">All exponents</option>
+          {[0, 1, 2, 3, 4, 5].map((e) => (
+            <option key={e} value={e}>
+              Exp {e}
+              {e === 0 ? ' (void)' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">{list.length} heroes shown</p>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {list.map((hero) => (

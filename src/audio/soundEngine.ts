@@ -1,6 +1,7 @@
 /**
  * Original Web Audio synthesis — ambient loop + anime-inspired clash SFX.
  * No copyrighted samples or ripped OST.
+ * Marvel’s “Portals” (MCU / Avengers soundtrack) is intentionally NOT included — copyright.
  */
 
 type FightCue = 'intro' | 'whoosh' | 'impact' | 'blast' | 'clash' | 'reveal' | 'draw'
@@ -155,24 +156,30 @@ export async function startAmbient(): Promise<void> {
   if (ambientNodes) return
 
   const master = ctx.createGain()
-  master.gain.value = 0.035
+  master.gain.value = 0.04
   master.connect(ctx.destination)
 
   const oscillators: OscillatorNode[] = []
-  const freqs = [55, 82.5, 110, 164.8]
+  // Deeper drones + a fifth for a richer original pad (still fully procedural)
+  const freqs = [48, 72, 96, 144, 192]
   freqs.forEach((freq, i) => {
     const osc = ctx.createOscillator()
     const lfo = ctx.createOscillator()
     const lfoGain = ctx.createGain()
     const gain = ctx.createGain()
+    const filter = ctx.createBiquadFilter()
     osc.type = i % 2 === 0 ? 'sine' : 'triangle'
     osc.frequency.value = freq
-    lfo.frequency.value = 0.08 + i * 0.03
-    lfoGain.gain.value = 4 + i
-    gain.gain.value = 0.2 / (i + 1)
+    lfo.type = 'sine'
+    lfo.frequency.value = 0.06 + i * 0.025
+    lfoGain.gain.value = 3 + i * 0.8
+    filter.type = 'lowpass'
+    filter.frequency.value = 600 + i * 120
+    gain.gain.value = 0.18 / (i + 1)
     lfo.connect(lfoGain)
     lfoGain.connect(osc.frequency)
-    osc.connect(gain)
+    osc.connect(filter)
+    filter.connect(gain)
     gain.connect(master)
     osc.start()
     lfo.start()
@@ -183,12 +190,12 @@ export async function startAmbient(): Promise<void> {
   const pulse = ctx.createOscillator()
   const pulseGain = ctx.createGain()
   pulse.type = 'sine'
-  pulse.frequency.value = 220
-  pulseGain.gain.value = 0.01
+  pulse.frequency.value = 196
+  pulseGain.gain.value = 0.012
   const pulseLfo = ctx.createOscillator()
   const pulseLfoGain = ctx.createGain()
-  pulseLfo.frequency.value = 0.15
-  pulseLfoGain.gain.value = 0.008
+  pulseLfo.frequency.value = 0.12
+  pulseLfoGain.gain.value = 0.01
   pulseLfo.connect(pulseLfoGain)
   pulseLfoGain.connect(pulseGain.gain)
   pulse.connect(pulseGain)
@@ -196,6 +203,24 @@ export async function startAmbient(): Promise<void> {
   pulse.start()
   pulseLfo.start()
   oscillators.push(pulse, pulseLfo)
+
+  // Slow shimmer (high sine, very quiet)
+  const shimmer = ctx.createOscillator()
+  const shimmerGain = ctx.createGain()
+  const shimmerLfo = ctx.createOscillator()
+  const shimmerLfoGain = ctx.createGain()
+  shimmer.type = 'sine'
+  shimmer.frequency.value = 523.25
+  shimmerGain.gain.value = 0.004
+  shimmerLfo.frequency.value = 0.09
+  shimmerLfoGain.gain.value = 0.003
+  shimmerLfo.connect(shimmerLfoGain)
+  shimmerLfoGain.connect(shimmerGain.gain)
+  shimmer.connect(shimmerGain)
+  shimmerGain.connect(master)
+  shimmer.start()
+  shimmerLfo.start()
+  oscillators.push(shimmer, shimmerLfo)
 
   ambientNodes = {
     gain: master,

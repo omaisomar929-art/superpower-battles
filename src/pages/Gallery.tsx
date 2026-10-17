@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { HEROES, TOTAL_HERO_COUNT, getHeroById } from '../heroes/data'
+import { HEROES, TOTAL_HERO_COUNT, getHeroById, isPowerZeroVoid } from '../heroes/data'
 import { HeroCard } from '../components/HeroCard'
 import { HeroArt } from '../heroes/HeroArt'
 import { MathExpression } from '../components/MathExpression'
@@ -64,6 +64,12 @@ export function Gallery() {
               />
             </p>
             <p className="mt-3 text-slate-300">{detail.tagline}</p>
+            {isPowerZeroVoid(detail) && (
+              <p className="mt-3 rounded-xl border border-slate-500/40 bg-slate-950/50 px-3 py-2 text-xs text-slate-400">
+                Null-power void variant — game power is <span className="text-amber-300">0</span> (math would
+                say n⁰=1 for n≠0; these fighters use the void override).
+              </p>
+            )}
             <dl className="mt-6 grid gap-3 sm:grid-cols-2 text-sm">
               <div>
                 <dt className="text-slate-500">Costume</dt>
@@ -111,7 +117,8 @@ export function Gallery() {
     <div className="mx-auto max-w-7xl px-4 py-8">
       <h1 className="font-display text-3xl tracking-widest text-sky-300">{TOTAL_HERO_COUNT} HEROES</h1>
       <p className="mt-2 text-slate-400">
-        Bases 1–10 × exponents 1–5, plus five null-power void fighters (0¹–0⁵). Search, sort, and inspect.
+        Bases 1–10 × exponents 1–5, plus null-base fighters (0¹–0⁵) and power-zero void variants (0⁰–10⁰).
+        Void n⁰ fighters use game power <span className="text-amber-300/90">0</span> — not mathematical 1.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -150,9 +157,10 @@ export function Gallery() {
           className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm"
         >
           <option value="all">All exponents</option>
-          {[1, 2, 3, 4, 5].map((e) => (
+          {[0, 1, 2, 3, 4, 5].map((e) => (
             <option key={e} value={e}>
               Exp {e}
+              {e === 0 ? ' (void / power 0)' : ''}
             </option>
           ))}
         </select>
