@@ -19,6 +19,8 @@ const SoundContext = createContext<SoundContextValue>({
   toggleMute: () => undefined,
 })
 
+const UNLOCK_EVENTS = ['pointerdown', 'touchstart', 'click', 'keydown'] as const
+
 export function useSound() {
   return useContext(SoundContext)
 }
@@ -30,24 +32,38 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     if (muted) return undefined
 
     let cancelled = false
+    let unlocked = false
 
     // Prefer unmuted autoplay immediately; fall back to muted play or first gesture.
     void tryAutoplayAmbient()
 
     const onGesture = () => {
-      if (cancelled) return
+      if (cancelled || unlocked) return
+      unlocked = true
       // Unmute muted-autoplay, or start play if autoplay was fully blocked.
       void ensureAudioUnlocked()
-      window.removeEventListener('pointerdown', onGesture)
-      window.removeEventListener('keydown', onGesture)
+      removeUnlockListeners()
     }
-    window.addEventListener('pointerdown', onGesture)
-    window.addEventListener('keydown', onGesture)
+
+    function addUnlockListeners() {
+      for (const event of UNLOCK_EVENTS) {
+        window.addEventListener(event, onGesture, { capture: true, passive: true })
+        document.addEventListener(event, onGesture, { capture: true, passive: true })
+      }
+    }
+
+    function removeUnlockListeners() {
+      for (const event of UNLOCK_EVENTS) {
+        window.removeEventListener(event, onGesture, { capture: true })
+        document.removeEventListener(event, onGesture, { capture: true })
+      }
+    }
+
+    addUnlockListeners()
 
     return () => {
       cancelled = true
-      window.removeEventListener('pointerdown', onGesture)
-      window.removeEventListener('keydown', onGesture)
+      removeUnlockListeners()
     }
   }, [muted])
 

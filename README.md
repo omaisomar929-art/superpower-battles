@@ -31,7 +31,7 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 4. Watch the animated sequence; the math on screen matches the winner
 5. **Pick New Fighters** or **Random Rematch**
 
-Use the speaker icon in the header to mute/unmute background music and fight SFX. Site-wide BGM is the original MP3 at `public/audio/original-bg.mp3`, starting at **0:35** and looping from 35s → end (the opening is never played). On load the app tries unmuted autoplay immediately; if the browser blocks sound, it falls back to muted autoplay then unmutes on the first click/keypress (or starts on that gesture). Fight cues remain Web Audio synthesis.
+Use the speaker icon in the header to mute/unmute background music and fight SFX. Site-wide BGM is the original MP3 at `public/audio/original-bg.mp3` (served as `/audio/original-bg.mp3`), starting at **0:35** and looping from 35s → end (the opening is never played). On the home splash, click **ENTER · TAP TO START** to unlock audio from a user gesture (browsers block unmuted autoplay otherwise). The app still tries autoplay on load, and any first `pointerdown` / `touchstart` / `click` / `keydown` also starts BGM if not muted. Mute preference is session-scoped (default unmuted each visit). Fight cues remain Web Audio synthesis.
 
 ## Stack
 

@@ -83,11 +83,14 @@ export function isMuted(): boolean {
   return muted
 }
 
+const MUTE_SESSION_KEY = 'power-battles-muted'
+
 export function setMuted(value: boolean): void {
   muted = value
   awaitingGestureUnmute = false
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('power-battles-muted', value ? '1' : '0')
+  // Session-scoped so a stuck mute from prior testing does not silence new visits.
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.setItem(MUTE_SESSION_KEY, value ? '1' : '0')
   }
   if (muted) {
     const audio = bgAudio
@@ -100,9 +103,17 @@ export function setMuted(value: boolean): void {
   }
 }
 
+/** Default unmuted each browser session; mute toggle still works within the session. */
 export function loadMutePreference(): boolean {
-  if (typeof localStorage === 'undefined') return false
-  muted = localStorage.getItem('power-battles-muted') === '1'
+  if (typeof localStorage !== 'undefined') {
+    // Drop legacy persistent mute so first-time / returning users are not blocked.
+    localStorage.removeItem(MUTE_SESSION_KEY)
+  }
+  if (typeof sessionStorage === 'undefined') {
+    muted = false
+    return false
+  }
+  muted = sessionStorage.getItem(MUTE_SESSION_KEY) === '1'
   return muted
 }
 
