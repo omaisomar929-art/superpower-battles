@@ -3,7 +3,24 @@
  * BGM starts at 35s and loops from 35s → end (never plays the intro).
  */
 
-type FightCue = 'intro' | 'whoosh' | 'impact' | 'blast' | 'clash' | 'reveal' | 'draw'
+export type FightCue =
+  | 'intro'
+  | 'whoosh'
+  | 'impact'
+  | 'blast'
+  | 'clash'
+  | 'reveal'
+  | 'draw'
+  | 'ability-fire'
+  | 'ability-void'
+  | 'ability-ice'
+  | 'ability-lightning'
+  | 'ability-cosmic'
+  | 'ability-shadow'
+  | 'ability-earth'
+  | 'ability-wind'
+  | 'ability-plasma'
+  | 'ability-crystal'
 
 /** Result of attempting BGM autoplay on mount. */
 export type AutoplayResult = 'playing' | 'muted-playing' | 'blocked' | 'skipped'
@@ -219,6 +236,55 @@ export function playFightCue(cue: FightCue): void {
     case 'draw':
       tone(392, 0.3, 'triangle', 0.04, t)
       tone(349.23, 0.45, 'sine', 0.035, t + 0.15)
+      break
+    case 'ability-fire':
+      noiseBurst(0.32, 0.09, t, 500)
+      tone(160, 0.28, 'sawtooth', 0.045, t, 1100)
+      tone(90, 0.35, 'sine', 0.03, t + 0.04, 400)
+      break
+    case 'ability-void':
+      tone(48, 0.55, 'sine', 0.07, t, 180)
+      tone(72, 0.45, 'triangle', 0.04, t + 0.05, 220)
+      noiseBurst(0.5, 0.06, t, 120)
+      break
+    case 'ability-ice':
+      noiseBurst(0.18, 0.08, t, 2200)
+      tone(980, 0.12, 'triangle', 0.04, t, 4000)
+      tone(640, 0.2, 'sine', 0.03, t + 0.06, 3000)
+      break
+    case 'ability-lightning':
+      noiseBurst(0.08, 0.12, t, 1500)
+      tone(1200, 0.08, 'square', 0.05, t, 5000)
+      tone(180, 0.15, 'sawtooth', 0.04, t + 0.03, 900)
+      break
+    case 'ability-cosmic':
+      tone(220, 0.4, 'sine', 0.05, t, 1600)
+      tone(440, 0.35, 'triangle', 0.04, t + 0.08, 2400)
+      tone(660, 0.3, 'sine', 0.03, t + 0.16, 2800)
+      break
+    case 'ability-shadow':
+      tone(70, 0.4, 'triangle', 0.05, t, 300)
+      noiseBurst(0.35, 0.05, t, 250)
+      tone(110, 0.25, 'sine', 0.03, t + 0.1, 400)
+      break
+    case 'ability-earth':
+      tone(55, 0.35, 'square', 0.06, t, 250)
+      noiseBurst(0.28, 0.09, t, 180)
+      tone(90, 0.2, 'sine', 0.035, t + 0.08, 350)
+      break
+    case 'ability-wind':
+      noiseBurst(0.4, 0.07, t, 800)
+      tone(300, 0.3, 'sine', 0.025, t, 2000)
+      break
+    case 'ability-plasma':
+      tone(380, 0.28, 'sawtooth', 0.045, t, 2200)
+      tone(760, 0.22, 'triangle', 0.035, t + 0.05, 3200)
+      noiseBurst(0.22, 0.06, t, 900)
+      break
+    case 'ability-crystal':
+      tone(880, 0.15, 'triangle', 0.04, t)
+      tone(1320, 0.18, 'sine', 0.03, t + 0.05)
+      noiseBurst(0.12, 0.05, t + 0.02, 2800)
       break
     default:
       break

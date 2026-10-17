@@ -1,12 +1,15 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { BattleResult } from '../battleEngine'
 import type { Hero } from '../heroes/types'
 import { HeroArt } from '../heroes/HeroArt'
 import { MathExpression } from '../components/MathExpression'
 import { playFightCue } from '../audio/soundEngine'
+import { getAbilityFx } from './abilityFx'
+import { AbilityVfx, ArenaCombatParticles } from './AbilityVfx'
+import type { FightPhase } from './fightPhases'
 
-export type FightPhase = 'idle' | 'introA' | 'introB' | 'battle' | 'compare' | 'clash' | 'reveal' | 'done'
+export type { FightPhase } from './fightPhases'
 
 interface FightSequenceProps {
   fighterA: Hero
@@ -20,9 +23,9 @@ interface FightSequenceProps {
 const PHASE_MS: Record<Exclude<FightPhase, 'idle' | 'done'>, number> = {
   introA: 1200,
   introB: 1200,
-  battle: 2400,
+  battle: 2800,
   compare: 1800,
-  clash: 1800,
+  clash: 2200,
   reveal: 2200,
 }
 
@@ -31,6 +34,9 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
   const [hpA, setHpA] = useState(100)
   const [hpB, setHpB] = useState(100)
   const [flash, setFlash] = useState(0)
+
+  const fxA = useMemo(() => getAbilityFx(fighterA), [fighterA])
+  const fxB = useMemo(() => getAbilityFx(fighterB), [fighterB])
 
   useEffect(() => {
     if (phase === 'idle' || phase === 'done') return
@@ -45,27 +51,43 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
   }, [phase, onComplete])
 
   useEffect(() => {
-    if (phase === 'introA' || phase === 'introB') playFightCue('intro')
+    if (phase === 'introA') {
+      playFightCue('intro')
+      playFightCue(fxA.cue)
+    }
+    if (phase === 'introB') {
+      playFightCue('intro')
+      playFightCue(fxB.cue)
+    }
     if (phase === 'battle') {
       playFightCue('whoosh')
+      playFightCue(fxA.cue)
       const id = window.setInterval(() => {
         playFightCue(Math.random() > 0.5 ? 'whoosh' : 'impact')
+        if (Math.random() > 0.45) playFightCue(Math.random() > 0.5 ? fxA.cue : fxB.cue)
         setFlash((f) => f + 1)
-      }, 420)
+      }, 380)
       return () => window.clearInterval(id)
     }
-    if (phase === 'compare') playFightCue('blast')
+    if (phase === 'compare') {
+      playFightCue('blast')
+      playFightCue(fxA.cue)
+      playFightCue(fxB.cue)
+    }
     if (phase === 'clash') {
       playFightCue('clash')
+      playFightCue(fxA.cue)
+      playFightCue(fxB.cue)
       const id = window.setInterval(() => {
         playFightCue('impact')
+        if (Math.random() > 0.4) playFightCue(Math.random() > 0.5 ? fxA.cue : fxB.cue)
         setFlash((f) => f + 1)
-      }, 280)
+      }, 260)
       return () => window.clearInterval(id)
     }
     if (phase === 'reveal') playFightCue(result.winner === 'draw' ? 'draw' : 'reveal')
     return undefined
-  }, [phase, result.winner])
+  }, [phase, result.winner, fxA.cue, fxB.cue])
 
   useEffect(() => {
     if (phase !== 'battle' && phase !== 'clash') return
@@ -92,24 +114,32 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
 
   const shake = phase === 'clash' || phase === 'battle'
   const heavyShake = phase === 'clash'
+  const combatActive = phase === 'battle' || phase === 'compare' || phase === 'clash'
 
   return (
     <motion.div
       className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70 min-h-[420px]"
       animate={
         heavyShake
-          ? { x: [0, -6, 6, -4, 4, 0], y: [0, 3, -3, 2, -2, 0] }
+          ? { x: [0, -8, 8, -5, 5, -3, 3, 0], y: [0, 4, -4, 3, -2, 0] }
           : shake
-            ? { x: [0, -2, 2, 0] }
+            ? { x: [0, -3, 3, -2, 2, 0], y: [0, 1, -1, 0] }
             : { x: 0, y: 0 }
       }
-      transition={{ repeat: shake ? Infinity : 0, duration: heavyShake ? 0.22 : 0.35 }}
+      transition={{ repeat: shake ? Infinity : 0, duration: heavyShake ? 0.2 : 0.32 }}
     >
       <div className="absolute inset-0 opacity-40" style={arenaBackground(arena)} />
 
+      <ArenaCombatParticles
+        colorA={fxA.accent}
+        colorB={fxB.accent}
+        active={combatActive}
+        heavy={phase === 'clash'}
+      />
+
       {/* Aura beams */}
       <AnimatePresence>
-        {(phase === 'battle' || phase === 'clash') && (
+        {combatActive && (
           <>
             <motion.div
               key="beam-a"
@@ -133,39 +163,68 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
         )}
       </AnimatePresence>
 
-      {/* Clash flash */}
+      {/* Per-hero signature ability VFX */}
+      <AbilityVfx fx={fxA} side="left" phase={phase === 'introB' ? 'idle' : phase} intensity={1} />
+      <AbilityVfx fx={fxB} side="right" phase={phase === 'introA' ? 'idle' : phase} intensity={1} />
+
+      {/* Clash flash — kept and enriched */}
       <AnimatePresence>
         {(phase === 'clash' || (phase === 'battle' && flash % 2 === 1)) && (
           <motion.div
             key={`flash-${flash}`}
             className="pointer-events-none absolute inset-0 z-20"
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.55, 0] }}
+            animate={{ opacity: [0, phase === 'clash' ? 0.7 : 0.45, 0] }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: phase === 'clash' ? 0.22 : 0.25 }}
             style={{
               background:
                 phase === 'clash'
-                  ? 'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.75), rgba(56,189,248,0.35) 35%, transparent 65%)'
+                  ? `radial-gradient(circle at 50% 45%, rgba(255,255,255,0.85), ${fxA.secondary}55 28%, ${fxB.secondary}45 42%, transparent 68%)`
                   : 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.25), transparent 50%)',
             }}
           />
         )}
       </AnimatePresence>
 
-      {/* Center clash spark */}
+      {/* Center clash spark — final clash stay */}
       <AnimatePresence>
         {phase === 'clash' && (
           <motion.div
             key="spark"
             className="pointer-events-none absolute left-1/2 top-[42%] z-30 -translate-x-1/2 -translate-y-1/2"
             initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: [0.4, 1.6, 1], opacity: [0, 1, 0.7], rotate: [0, 20, -10] }}
+            animate={{ scale: [0.4, 1.8, 1.1], opacity: [0, 1, 0.75], rotate: [0, 25, -15, 10] }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, repeat: Infinity, repeatType: 'mirror' }}
+            transition={{ duration: 0.45, repeat: Infinity, repeatType: 'mirror' }}
           >
-            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-white via-sky-300 to-amber-300 blur-md" />
+            <div
+              className="h-28 w-28 rounded-full blur-md"
+              style={{
+                background: `radial-gradient(circle, #fff, ${fxA.accent}, ${fxB.accent}, transparent 70%)`,
+              }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full border-2"
+              style={{ borderColor: `${fxA.primary}aa` }}
+              animate={{ scale: [1, 1.6], opacity: [0.8, 0] }}
+              transition={{ duration: 0.4, repeat: Infinity }}
+            />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Impact ring pulses during battle hits */}
+      <AnimatePresence>
+        {phase === 'battle' && flash > 0 && (
+          <motion.div
+            key={`impact-ring-${flash}`}
+            className="pointer-events-none absolute left-1/2 top-[42%] z-[18] h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40"
+            initial={{ scale: 0.3, opacity: 0.7 }}
+            animate={{ scale: 2.2, opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+          />
         )}
       </AnimatePresence>
 
@@ -178,6 +237,7 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
         <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-6">
           <FighterPanel
             hero={fighterA}
+            fx={fxA}
             hp={hpA}
             side="left"
             phase={phase}
@@ -190,16 +250,26 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
               className="font-display text-3xl sm:text-5xl text-rose-400"
               animate={
                 shake
-                  ? { scale: [1, 1.35, 1], rotate: [0, -8, 8, 0], textShadow: ['0 0 0px #fff', '0 0 24px #38bdf8', '0 0 0px #fff'] }
+                  ? { scale: [1, 1.4, 1], rotate: [0, -10, 10, 0], textShadow: ['0 0 0px #fff', '0 0 28px #38bdf8', '0 0 0px #fff'] }
                   : {}
               }
-              transition={{ repeat: shake ? Infinity : 0, duration: 0.35 }}
+              transition={{ repeat: shake ? Infinity : 0, duration: 0.32 }}
             >
               VS
             </motion.div>
+            {combatActive && (
+              <motion.div
+                className="mt-1 text-[9px] tracking-widest text-slate-500 sm:text-[10px]"
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 0.8, repeat: Infinity }}
+              >
+                {fxA.family.toUpperCase()} × {fxB.family.toUpperCase()}
+              </motion.div>
+            )}
           </div>
           <FighterPanel
             hero={fighterB}
+            fx={fxB}
             hp={hpB}
             side="right"
             phase={phase}
@@ -246,6 +316,11 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
                   <div className="font-display text-2xl text-amber-300">WINNER: {result.winnerHero?.name}</div>
                   <p className="mt-2 text-slate-300">{result.explanation}</p>
                   <p className="mt-2 text-xs text-slate-500 italic">{result.winnerHero?.victoryAnimation}</p>
+                  {result.winnerHero && (
+                    <p className="mt-1 text-xs tracking-wide" style={{ color: getAbilityFx(result.winnerHero).accent }}>
+                      Finisher · {getAbilityFx(result.winnerHero).label}
+                    </p>
+                  )}
                 </>
               )}
             </motion.div>
@@ -266,6 +341,7 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
 
 function FighterPanel({
   hero,
+  fx,
   hp,
   side,
   phase,
@@ -274,6 +350,7 @@ function FighterPanel({
   shake,
 }: {
   hero: Hero
+  fx: ReturnType<typeof getAbilityFx>
   hp: number
   side: 'left' | 'right'
   phase: FightPhase
@@ -281,15 +358,38 @@ function FighterPanel({
   dim: boolean
   shake: boolean
 }) {
-  const dashX = side === 'left' ? [0, 28, -8, 18, 0] : [0, -28, 8, -18, 0]
+  const dashAmp = 22 * fx.dashIntensity
+  const dashX = side === 'left' ? [0, dashAmp, -dashAmp * 0.35, dashAmp * 0.7, 0] : [0, -dashAmp, dashAmp * 0.35, -dashAmp * 0.7, 0]
   const introX = side === 'left' ? [-40, 0] : [40, 0]
+  const windup =
+    (phase === 'introA' && side === 'left') || (phase === 'introB' && side === 'right')
 
-  let animate: Record<string, number | number[]> = { x: 0 }
-  if (phase === 'introA' && side === 'left') animate = { x: introX }
-  if (phase === 'introB' && side === 'right') animate = { x: introX }
-  if (phase === 'battle') animate = { x: dashX, y: [0, -6, 4, -2, 0] }
-  if (phase === 'clash') animate = { x: side === 'left' ? [0, 40, 28] : [0, -40, -28], scale: [1, 1.08, 1.05] }
-  if (shake && phase !== 'clash' && phase !== 'battle') {
+  let animate: Record<string, number | number[]> = { x: 0, scale: 1 }
+  if (phase === 'introA' && side === 'left') animate = { x: introX, scale: [0.92, fx.windupScale] }
+  if (phase === 'introB' && side === 'right') animate = { x: introX, scale: [0.92, fx.windupScale] }
+  if (phase === 'battle') {
+    animate = {
+      x: dashX,
+      y: [0, -8 * fx.dashIntensity, 5, -3, 0],
+      rotate: side === 'left' ? [0, -4, 3, -2, 0] : [0, 4, -3, 2, 0],
+      scale: [1, 1.06, 0.98, 1.04, 1],
+    }
+  }
+  if (phase === 'compare') {
+    animate = {
+      x: side === 'left' ? [0, 12, 8] : [0, -12, -8],
+      scale: [1, fx.windupScale, 1.08],
+    }
+  }
+  // Clash: fighters stay locked in the center clash
+  if (phase === 'clash') {
+    animate = {
+      x: side === 'left' ? [0, 44, 32, 40, 34] : [0, -44, -32, -40, -34],
+      scale: [1, 1.1, 1.06, 1.12, 1.08],
+      y: [0, -4, 2, -3, 0],
+    }
+  }
+  if (shake && phase !== 'clash' && phase !== 'battle' && phase !== 'compare') {
     animate = { x: side === 'left' ? [0, 8, -4, 0] : [0, -8, 4, 0] }
   }
 
@@ -298,22 +398,22 @@ function FighterPanel({
       className={`relative text-center ${dim ? 'opacity-40 grayscale' : ''} ${highlight ? 'drop-shadow-[0_0_20px_rgba(56,189,248,0.6)]' : ''}`}
       animate={animate}
       transition={{
-        repeat: phase === 'battle' ? Infinity : 0,
-        duration: phase === 'battle' ? 0.45 : phase === 'clash' ? 0.35 : 0.55,
+        repeat: phase === 'battle' || phase === 'clash' ? Infinity : 0,
+        duration: phase === 'battle' ? 0.42 : phase === 'clash' ? 0.3 : 0.55,
         ease: 'easeInOut',
       }}
     >
-      {(phase === 'battle' || phase === 'clash' || highlight) && (
+      {(phase === 'battle' || phase === 'clash' || phase === 'compare' || highlight || windup) && (
         <motion.div
           className="pointer-events-none absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
             boxShadow: `0 0 40px 12px ${hero.accentColor}55, inset 0 0 30px ${hero.secondaryColor}44`,
           }}
-          animate={{ opacity: [0.35, 0.8, 0.35], scale: [0.9, 1.15, 0.9] }}
-          transition={{ duration: 0.6, repeat: Infinity }}
+          animate={{ opacity: [0.35, 0.85, 0.35], scale: [0.9, 1.18, 0.9] }}
+          transition={{ duration: 0.55, repeat: Infinity }}
         />
       )}
-      <HeroArt hero={hero} size={140} animated={highlight || shake} />
+      <HeroArt hero={hero} size={140} animated={highlight || shake || windup} />
       <div className="mt-2 font-display text-sm sm:text-base" style={{ color: hero.mainColor }}>
         {hero.name}
       </div>
