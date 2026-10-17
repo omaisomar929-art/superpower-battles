@@ -1,21 +1,11 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ensureAudioUnlocked, startAmbient } from '../audio/soundEngine'
 import { HEROES, TOTAL_HERO_COUNT } from '../heroes/data'
 import { HeroArt } from '../heroes/HeroArt'
 
 export function Home() {
   const left = HEROES[14]
   const right = HEROES[23]
-  const [audioStarted, setAudioStarted] = useState(false)
-
-  async function handleEnter() {
-    // User gesture: unlock Web Audio + start BGM unmuted from 35s.
-    await ensureAudioUnlocked()
-    await startAmbient()
-    setAudioStarted(true)
-  }
 
   return (
     <div className="relative overflow-hidden">
@@ -95,37 +85,16 @@ export function Home() {
           </a>
         </motion.div>
 
-        <motion.div
-          className="mt-8"
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.35, duration: 0.5 }}
-        >
-          <button
-            type="button"
-            className="btn-primary min-w-[14rem] px-10 py-3 text-base tracking-[0.28em] shadow-[0_0_28px_rgba(56,189,248,0.35)]"
-            onClick={() => void handleEnter()}
-            aria-label={audioStarted ? 'Music started' : 'Enter and start music'}
-          >
-            {audioStarted ? 'MUSIC ON' : 'ENTER · TAP TO START'}
-          </button>
-          {!audioStarted && (
-            <p className="mt-3 text-xs uppercase tracking-[0.28em] text-slate-500">
-              Starts soundtrack from 0:35
-            </p>
-          )}
-        </motion.div>
-
         <p className="mt-6 max-w-xl text-base sm:text-lg text-slate-300">
           {TOTAL_HERO_COUNT} original heroes — including null-base voids (0¹–0⁵) and power-zero void
           variants (0⁰–10⁰). Higher power wins. Always.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row gap-3">
-          <Link to="/select" className="btn-primary" onClick={() => void handleEnter()}>
+          <Link to="/select" className="btn-primary">
             PICK FIGHTERS
           </Link>
-          <Link to="/gallery" className="btn-secondary" onClick={() => void handleEnter()}>
+          <Link to="/gallery" className="btn-secondary">
             EXPLORE HEROES
           </Link>
         </div>
