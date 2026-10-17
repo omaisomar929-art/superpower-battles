@@ -13,6 +13,7 @@ import {
   type HitKind,
 } from './damageRules'
 import { TouchPads, type TouchDir } from './TouchPads'
+import { FLY_SPEED, applyHoldToAscendFlight } from './flightPhysics'
 
 const ARENA_W = 960
 const ARENA_H = 520
@@ -25,9 +26,6 @@ const MAX_X = ARENA_W - FIGHTER_R
 const MIN_Y = SPRITE_H
 const MAX_Y = GROUND_Y
 const MOVE_SPEED = 280
-const FLY_SPEED = 240
-const GRAVITY = 980
-const JUMP_VY = -420
 const PUNCH_RANGE = 110
 const ABILITY_RANGE = 260
 const PUNCH_COOLDOWN = 0.35
@@ -115,7 +113,6 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
   const timeRef = useRef(MATCH_SECONDS)
   const outcomeRef = useRef<Outcome>(null)
   const fxId = useRef(0)
-  const spaceTapRef = useRef(0)
 
   const [p1, setP1] = useState(() => makeFighter(180, GROUND_Y, 1))
   const [p2, setP2] = useState(() => makeFighter(ARENA_W - 180, GROUND_Y, -1))
@@ -179,12 +176,6 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
     const target = side === 'p1' ? touchP1Ref.current : touchP2Ref.current
     for (const key of Object.keys(dir) as (keyof TouchDir)[]) {
       if (dir[key]) target[key] = active
-    }
-    // Touch up engages fly for P1 (Space-equivalent hold + fly toggle)
-    if (side === 'p1' && dir.up) {
-      if (active) {
-        p1Ref.current.flying = true
-      }
     }
   }, [])
 
@@ -287,6 +278,10 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
     }
     tryActionRef.current = tryAction
 
+    const clearKeys = () => {
+      keysRef.current.clear()
+    }
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return
       const key = e.key.toLowerCase()
@@ -296,17 +291,6 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
       keysRef.current.add(key)
       if (e.code === 'Space') keysRef.current.add(' ')
       if (e.key === 'Shift' || e.code.startsWith('Shift')) keysRef.current.add('shift')
-
-      // Double-tap Space → fly toggle for P1
-      if (e.code === 'Space' && !outcomeRef.current) {
-        const now = performance.now()
-        if (now - spaceTapRef.current < 280) {
-          p1Ref.current.flying = !p1Ref.current.flying
-          if (p1Ref.current.flying) p1Ref.current.vy = -80
-          clampFighterToArena(p1Ref.current)
-        }
-        spaceTapRef.current = now
-      }
 
       // Edge-triggered combat (reliable vs RAF polling)
       if (key === 't') tryAction('p1', 'punch')
@@ -321,12 +305,24 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
       if (e.key === 'Shift' || e.code.startsWith('Shift')) keysRef.current.delete('shift')
     }
 
+    const onWindowBlur = () => clearKeys()
+    const onVisibility = () => {
+      if (document.hidden) clearKeys()
+    }
+
     el.addEventListener('keydown', onKeyDown)
     el.addEventListener('keyup', onKeyUp)
+    el.addEventListener('blur', clearKeys)
+    window.addEventListener('blur', onWindowBlur)
+    document.addEventListener('visibilitychange', onVisibility)
     el.focus()
     return () => {
       el.removeEventListener('keydown', onKeyDown)
       el.removeEventListener('keyup', onKeyUp)
+      el.removeEventListener('blur', clearKeys)
+      window.removeEventListener('blur', onWindowBlur)
+      document.removeEventListener('visibilitychange', onVisibility)
+      clearKeys()
     }
   }, [applyHit])
 
@@ -356,35 +352,20 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
       const t1 = touchP1Ref.current
       const t2 = touchP2Ref.current
       if (!outcomeRef.current) {
-        const p1Up = keys.has('w') || t1.up
-        const p1FlyHold = keys.has(' ') || t1.up
-        integrateFighter(
-          p1Ref.current,
-          dt,
-          {
-            left: keys.has('a') || t1.left,
-            right: keys.has('d') || t1.right,
-            up: p1Up,
-            down: keys.has('s') || t1.down,
-            jump: keys.has(' ') || t1.up,
-            flyHold: p1FlyHold,
-          },
-          true,
-        )
+        // Hold-to-ascend: P1 W or Space (or touch ▲); P2 ArrowUp (or touch ▲)
+        integrateFighter(p1Ref.current, dt, {
+          left: keys.has('a') || t1.left,
+          right: keys.has('d') || t1.right,
+          ascend: keys.has('w') || keys.has(' ') || t1.up,
+          descend: keys.has('s') || t1.down,
+        })
 
-        integrateFighter(
-          p2Ref.current,
-          dt,
-          {
-            left: keys.has('arrowleft') || t2.left,
-            right: keys.has('arrowright') || t2.right,
-            up: keys.has('arrowup') || t2.up,
-            down: keys.has('arrowdown') || t2.down,
-            jump: keys.has('arrowup') || t2.up,
-            flyHold: keys.has('arrowup') || t2.up,
-          },
-          false,
-        )
+        integrateFighter(p2Ref.current, dt, {
+          left: keys.has('arrowleft') || t2.left,
+          right: keys.has('arrowright') || t2.right,
+          ascend: keys.has('arrowup') || t2.up,
+          descend: keys.has('arrowdown') || t2.down,
+        })
 
         // Face each other when close
         if (Math.abs(p1Ref.current.x - p2Ref.current.x) > 8) {
@@ -439,7 +420,7 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
           <div>
             <HudBar hero={fighterA} hp={p1.hp} fx={fxA} align="left" label="P1 · LEFT" />
             <p className="mt-1 hidden text-[10px] leading-snug text-sky-300/80 sm:block">
-              WASD · Space fly · T punch · Y ability
+              WASD · hold W/Space ascend · T punch · Y ability
             </p>
           </div>
           <div className="text-center">
@@ -576,12 +557,13 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
             <span className="rounded bg-sky-500/25 px-2 py-0.5 text-[10px] font-semibold text-sky-100">P1</span>
           </div>
           <p className="mt-2 leading-relaxed">
-            <span className="font-semibold text-white">WASD</span> ·{' '}
-            <span className="font-semibold text-white">Space</span> fly ·{' '}
+            <span className="font-semibold text-white">WASD</span> · hold{' '}
+            <span className="font-semibold text-white">W</span>/<span className="font-semibold text-white">Space</span>{' '}
+            ascend · <span className="font-semibold text-white">S</span> descend ·{' '}
             <span className="font-semibold text-white">T</span> punch ·{' '}
             <span className="font-semibold text-white">Y</span> ability
           </p>
-          <p className="mt-1.5 text-[10px] text-sky-200/70">Touch: left d-pad (move + fly) · Punch · Ability</p>
+          <p className="mt-1.5 text-[10px] text-sky-200/70">Touch: left d-pad (hold ▲ ascend) · Punch · Ability</p>
         </div>
         <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-slate-200 sm:p-4">
           <div className="flex items-center justify-between gap-2">
@@ -589,11 +571,13 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
             <span className="rounded bg-rose-500/25 px-2 py-0.5 text-[10px] font-semibold text-rose-100">P2</span>
           </div>
           <p className="mt-2 leading-relaxed">
-            <span className="font-semibold text-white">Arrows</span> ·{' '}
+            <span className="font-semibold text-white">Arrows</span> · hold{' '}
+            <span className="font-semibold text-white">↑</span> ascend ·{' '}
+            <span className="font-semibold text-white">↓</span> descend ·{' '}
             <span className="font-semibold text-white">Enter</span> punch ·{' '}
             <span className="font-semibold text-white">Shift</span> ability
           </p>
-          <p className="mt-1.5 text-[10px] text-rose-200/70">Touch: right d-pad (move + fly) · Punch · Ability</p>
+          <p className="mt-1.5 text-[10px] text-rose-200/70">Touch: right d-pad (hold ▲ ascend) · Punch · Ability</p>
         </div>
         <p className="text-[11px] text-slate-500 sm:col-span-2">{VERSUS_RULES_COPY}</p>
       </div>
@@ -636,12 +620,9 @@ function integrateFighter(
   input: {
     left: boolean
     right: boolean
-    up: boolean
-    down: boolean
-    jump: boolean
-    flyHold: boolean
+    ascend: boolean
+    descend: boolean
   },
-  isP1: boolean,
 ) {
   decayTimers(f, dt)
   if (f.stun > 0) {
@@ -653,53 +634,26 @@ function integrateFighter(
     return
   }
 
-  // Fly / freeflight
-  if (isP1) {
-    if (input.flyHold && f.flying) {
-      f.vy = input.up ? -FLY_SPEED : input.down ? FLY_SPEED : f.vy * 0.9
-    } else if (!f.flying) {
-      if (input.jump && f.y >= GROUND_Y - 1) f.vy = JUMP_VY
-    }
-  } else {
-    // P2: Up/Down freeflight when airborne or holding Up to rise
-    if (input.up) {
-      f.flying = true
-      f.vy = -FLY_SPEED
-    } else if (input.down && (f.flying || f.y < GROUND_Y - 2)) {
-      f.flying = true
-      f.vy = FLY_SPEED
-    } else if (f.y >= GROUND_Y - 1) {
-      f.flying = false
-    }
-  }
+  applyHoldToAscendFlight(f, { ascend: input.ascend, descend: input.descend }, dt, GROUND_Y)
 
   let ax = 0
   if (input.left) ax -= 1
   if (input.right) ax += 1
-  const speed = f.flying ? FLY_SPEED : MOVE_SPEED
+  const airborne = f.flying || f.y < GROUND_Y - 1
+  const speed = airborne ? FLY_SPEED : MOVE_SPEED
   f.vx = ax * speed
-
-  if (isP1 && f.flying) {
-    if (input.up) f.vy = -FLY_SPEED
-    else if (input.down) f.vy = FLY_SPEED
-    else f.vy *= 0.92
-  }
-
-  if (!f.flying) {
-    f.vy += GRAVITY * dt
-  } else if (isP1 && !input.flyHold && !input.up && !input.down) {
-    // gentle hover
-    f.vy *= 0.96
-  }
 
   f.x += f.vx * dt
   f.y += f.vy * dt
   clampFighterToArena(f)
 
+  // Re-apply landing after integration (position may have crossed the floor)
   if (f.y >= GROUND_Y - 0.5) {
     f.y = GROUND_Y
-    f.vy = 0
-    if (!input.flyHold && !(input.up && !isP1)) f.flying = false
+    if (!input.ascend) {
+      f.vy = 0
+      f.flying = false
+    }
   }
 }
 

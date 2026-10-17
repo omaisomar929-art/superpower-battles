@@ -40,10 +40,10 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
 ### Controls
 
-| | Move | Fly | Punch | Ability |
+| | Move | Fly (hold-to-ascend) | Punch | Ability |
 |---|---|---|---|---|
-| **P1 (left)** | WASD | Space fly (jump / double-tap toggle; W/S while flying) | T | Y |
-| **P2 (right)** | Arrow keys | ↑ rise / ↓ drop (freeflight) | Enter | Shift |
+| **P1 (left)** | WASD | Hold **W** or **Space** to ascend; release to fall; **S** descend | T | Y |
+| **P2 (right)** | Arrow keys | Hold **↑** to ascend; release to fall; **↓** descend | Enter | Shift |
 
 ### Phone / touch
 
