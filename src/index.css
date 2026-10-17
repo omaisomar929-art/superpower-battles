@@ -105,3 +105,15 @@ button {
   font-size: 0.875rem;
   color: #e2e8f0;
 }
+
+.kbd {
+  display: inline-block;
+  margin: 0 0.1rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.9);
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: #e2e8f0;
+}

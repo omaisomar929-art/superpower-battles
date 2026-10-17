@@ -10,7 +10,7 @@ Pick two of **66 original heroes**:
 - **5 null-base** voids — `0¹`–`0⁵` (power **0**)
 - **11 power-zero void variants** — `0⁰`–`10⁰` with **game power 0** (math would say n⁰=1 for n≠0; these use a void override)
 
-Watch a live arena fight. **Higher power wins. Equal powers draw. Power 0 loses to any positive. Two zeros draw. Never random.**
+Watch a live cinematic arena fight, or play **2 Player** local multiplayer. **Higher power wins. Equal powers draw. Power 0 loses to any positive. Two zeros draw. Never random.**
 
 No video render server. No separate API. Just the site.
 
@@ -23,13 +23,34 @@ npm run dev
 
 Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
-## How to fight
+## How to fight (cinematic)
 
 1. **Home** → **Pick Fighters** (or open **Fight**)
 2. Choose Fighter A and Fighter B (or **Randomize**)
 3. **Enter Arena**
-4. Watch the animated sequence; the math on screen matches the winner
+4. Watch the animated sequence; both fighters punch and fire unique abilities; the math on screen matches the winner
 5. **Pick New Fighters** or **Random Rematch**
+
+## 2 Player (local versus)
+
+1. **Home** → **2 Player** (or open `/versus`)
+2. Player 1 and Player 2 each pick a **different** hero
+3. **Enter Versus** — click the arena to focus controls
+4. Fight until HP hits 0 or the 90s timer ends (higher HP wins; still tied → draw)
+
+### Controls
+
+| | Move | Fly | Punch | Ability |
+|---|---|---|---|---|
+| **P1** | WASD | Space jump · double-tap Space to toggle fly (W/S while flying) | T | Y |
+| **P2** | Arrow keys | ↑ rise / ↓ drop (freeflight) | Enter | Shift |
+
+### Damage rules (math-gated)
+
+- Attacker power **>** defender → punches & abilities deal damage
+- Attacker power **<** defender → hits land visually but **0 damage** (blocked)
+- **Equal** power → both can damage
+- Power expressions (`base^exponent = power`) are shown in the HUD
 
 Use the speaker icon in the header to mute/unmute background music and fight SFX. Site-wide BGM is the original MP3 at `public/audio/original-bg.mp3` (served as `/audio/original-bg.mp3`), starting at **0:35** and looping from 35s → end (the opening is never played). On load the app calls `tryAutoplayAmbient()` (unmuted first, muted fallback if needed). True unmuted autoplay may still be blocked by the browser with zero interaction — that is browser policy, not something the app can force. Any first `pointerdown` / `touchstart` / `click` / `keydown` on normal UI unlocks/starts BGM if not muted (no dedicated audio-start button). Mute preference is session-scoped (default unmuted each visit). Fight cues remain Web Audio synthesis.
 
@@ -54,8 +75,9 @@ Checks: 66 heroes, bases/exponents (including 0), power-zero void override, stro
 src/heroes/          # 66 heroes + procedural SVG art
 src/mathEngine/      # power math + Unicode / <sup> notation
 src/battleEngine/    # deterministic fight resolution
-src/animations/      # live arena fight sequence
+src/animations/      # live arena fight sequence + ability / punch VFX
+src/versus/          # 2P damage rules + controllable arena
 src/audio/           # MP3 BGM (from 0:35) + fight SFX
 public/audio/        # original-bg.mp3
-src/pages/           # Home, Gallery, Select, Arena
+src/pages/           # Home, Gallery, Select, Arena, Versus
 ```

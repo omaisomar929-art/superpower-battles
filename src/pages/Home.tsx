@@ -94,6 +94,9 @@ export function Home() {
           <Link to="/select" className="btn-primary">
             PICK FIGHTERS
           </Link>
+          <Link to="/versus" className="btn-secondary">
+            2 PLAYER
+          </Link>
           <Link to="/gallery" className="btn-secondary">
             EXPLORE HEROES
           </Link>

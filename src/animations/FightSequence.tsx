@@ -7,6 +7,7 @@ import { MathExpression } from '../components/MathExpression'
 import { playFightCue } from '../audio/soundEngine'
 import { getAbilityFx } from './abilityFx'
 import { AbilityVfx, ArenaCombatParticles } from './AbilityVfx'
+import { DualPunchVfx } from './DualPunchVfx'
 import type { FightPhase } from './fightPhases'
 
 export type { FightPhase } from './fightPhases'
@@ -61,12 +62,18 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
     }
     if (phase === 'battle') {
       playFightCue('whoosh')
+      // Both fighters open with their signature + punches
       playFightCue(fxA.cue)
+      playFightCue(fxB.cue)
+      playFightCue('impact')
+      let tick = 0
       const id = window.setInterval(() => {
-        playFightCue(Math.random() > 0.5 ? 'whoosh' : 'impact')
-        if (Math.random() > 0.45) playFightCue(Math.random() > 0.5 ? fxA.cue : fxB.cue)
+        tick += 1
+        playFightCue(tick % 2 === 0 ? 'whoosh' : 'impact')
+        // Alternate ability cues so neither side goes silent
+        playFightCue(tick % 2 === 0 ? fxA.cue : fxB.cue)
         setFlash((f) => f + 1)
-      }, 380)
+      }, 340)
       return () => window.clearInterval(id)
     }
     if (phase === 'compare') {
@@ -78,11 +85,13 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
       playFightCue('clash')
       playFightCue(fxA.cue)
       playFightCue(fxB.cue)
+      let tick = 0
       const id = window.setInterval(() => {
+        tick += 1
         playFightCue('impact')
-        if (Math.random() > 0.4) playFightCue(Math.random() > 0.5 ? fxA.cue : fxB.cue)
+        playFightCue(tick % 2 === 0 ? fxB.cue : fxA.cue)
         setFlash((f) => f + 1)
-      }, 260)
+      }, 240)
       return () => window.clearInterval(id)
     }
     if (phase === 'reveal') playFightCue(result.winner === 'draw' ? 'draw' : 'reveal')
@@ -163,9 +172,22 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
         )}
       </AnimatePresence>
 
-      {/* Per-hero signature ability VFX */}
-      <AbilityVfx fx={fxA} side="left" phase={phase === 'introB' ? 'idle' : phase} intensity={1} />
-      <AbilityVfx fx={fxB} side="right" phase={phase === 'introA' ? 'idle' : phase} intensity={1} />
+      {/* Per-hero signature ability VFX — both fire in battle/clash (intros stay solo) */}
+      <AbilityVfx
+        fx={fxA}
+        side="left"
+        phase={phase === 'introB' ? 'idle' : phase}
+        intensity={phase === 'battle' || phase === 'clash' ? 1 : 0.95}
+      />
+      <AbilityVfx
+        fx={fxB}
+        side="right"
+        phase={phase === 'introA' ? 'idle' : phase}
+        intensity={phase === 'battle' || phase === 'clash' ? 1 : 0.95}
+      />
+
+      {/* Symmetric hand punches for both fighters */}
+      <DualPunchVfx fxA={fxA} fxB={fxB} phase={phase} flash={flash} />
 
       {/* Clash flash — kept and enriched */}
       <AnimatePresence>
@@ -368,25 +390,28 @@ function FighterPanel({
   if (phase === 'introA' && side === 'left') animate = { x: introX, scale: [0.92, fx.windupScale] }
   if (phase === 'introB' && side === 'right') animate = { x: introX, scale: [0.92, fx.windupScale] }
   if (phase === 'battle') {
+    // Both sides punch / dash — mirrored so neither idles
     animate = {
       x: dashX,
       y: [0, -8 * fx.dashIntensity, 5, -3, 0],
-      rotate: side === 'left' ? [0, -4, 3, -2, 0] : [0, 4, -3, 2, 0],
-      scale: [1, 1.06, 0.98, 1.04, 1],
+      rotate: side === 'left' ? [0, -8, 6, -4, 0] : [0, 8, -6, 4, 0],
+      scale: [1, 1.08, 0.96, 1.06, 1],
     }
   }
   if (phase === 'compare') {
     animate = {
-      x: side === 'left' ? [0, 12, 8] : [0, -12, -8],
-      scale: [1, fx.windupScale, 1.08],
+      x: side === 'left' ? [0, 14, 10] : [0, -14, -10],
+      scale: [1, fx.windupScale, 1.1],
+      rotate: side === 'left' ? [0, -6, -3] : [0, 6, 3],
     }
   }
-  // Clash: fighters stay locked in the center clash
+  // Clash: both fighters locked in — dual wind-up punches into the spark
   if (phase === 'clash') {
     animate = {
-      x: side === 'left' ? [0, 44, 32, 40, 34] : [0, -44, -32, -40, -34],
-      scale: [1, 1.1, 1.06, 1.12, 1.08],
-      y: [0, -4, 2, -3, 0],
+      x: side === 'left' ? [0, 48, 30, 46, 34] : [0, -48, -30, -46, -34],
+      scale: [1, 1.14, 1.04, 1.16, 1.08],
+      y: [0, -6, 3, -5, 0],
+      rotate: side === 'left' ? [0, -10, 4, -8, 0] : [0, 10, -4, 8, 0],
     }
   }
   if (shake && phase !== 'clash' && phase !== 'battle' && phase !== 'compare') {
@@ -413,7 +438,26 @@ function FighterPanel({
           transition={{ duration: 0.55, repeat: Infinity }}
         />
       )}
-      <HeroArt hero={hero} size={140} animated={highlight || shake || windup} />
+      <HeroArt
+        hero={hero}
+        size={140}
+        animated={highlight || shake || windup || phase === 'battle' || phase === 'clash' || phase === 'compare'}
+      />
+      {(phase === 'battle' || phase === 'clash') && (
+        <motion.div
+          className="pointer-events-none absolute left-1/2 top-[38%] z-10 h-4 w-10 -translate-x-1/2 rounded-full"
+          style={{
+            background: `linear-gradient(${side === 'left' ? 90 : 270}deg, ${fx.accent}, transparent)`,
+            boxShadow: `0 0 12px ${fx.secondary}`,
+          }}
+          animate={{
+            x: side === 'left' ? [0, 28, 8] : [0, -28, -8],
+            opacity: [0.35, 1, 0.4],
+            scaleX: [0.6, 1.2, 0.7],
+          }}
+          transition={{ duration: 0.35, repeat: Infinity, delay: side === 'right' ? 0.12 : 0 }}
+        />
+      )}
       <div className="mt-2 font-display text-sm sm:text-base" style={{ color: hero.mainColor }}>
         {hero.name}
       </div>

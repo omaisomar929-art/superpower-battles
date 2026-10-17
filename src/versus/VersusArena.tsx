@@ -1,0 +1,704 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import type { Hero } from '../heroes/types'
+import { HeroArt } from '../heroes/HeroArt'
+import { MathExpression } from '../components/MathExpression'
+import { getAbilityFx } from '../animations/abilityFx'
+import { playFightCue } from '../audio/soundEngine'
+import {
+  MATCH_SECONDS,
+  MAX_HP,
+  VERSUS_RULES_COPY,
+  resolveHitDamage,
+  type HitKind,
+} from './damageRules'
+
+const ARENA_W = 960
+const ARENA_H = 520
+const GROUND_Y = ARENA_H - 72
+const FIGHTER_R = 36
+const MOVE_SPEED = 280
+const FLY_SPEED = 240
+const GRAVITY = 980
+const JUMP_VY = -420
+const PUNCH_RANGE = 110
+const ABILITY_RANGE = 260
+const PUNCH_COOLDOWN = 0.35
+const ABILITY_COOLDOWN = 1.1
+const HIT_STUN = 0.18
+
+type Outcome = 'p1' | 'p2' | 'draw' | null
+
+interface FighterState {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  facing: 1 | -1
+  flying: boolean
+  hp: number
+  punchCd: number
+  abilityCd: number
+  stun: number
+  punching: number
+  abilitying: number
+  hitFlash: number
+  blockedFlash: number
+}
+
+interface FxEvent {
+  id: number
+  kind: HitKind | 'block'
+  x: number
+  y: number
+  color: string
+  label: string
+  side: 'p1' | 'p2'
+}
+
+interface VersusArenaProps {
+  fighterA: Hero
+  fighterB: Hero
+  arena?: string
+  onExit?: () => void
+  onRematch?: () => void
+}
+
+const P1_KEYS = new Set(['w', 'a', 's', 'd', 't', 'y', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter', 'shift'])
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n))
+}
+
+function arenaBg(arena: string): string {
+  const map: Record<string, string> = {
+    'neon-colosseum':
+      'radial-gradient(circle at 50% 85%, rgba(56,189,248,0.35), transparent 55%), linear-gradient(180deg,#0f172a,#020617)',
+    'void-rift': 'radial-gradient(circle at 50% 40%, rgba(99,102,241,0.4), transparent 50%), #02010a',
+    'storm-spire': 'radial-gradient(circle at 30% 20%, rgba(56,189,248,0.35), transparent 45%), #0b1220',
+    'ember-crater': 'radial-gradient(circle at 50% 100%, rgba(249,115,22,0.4), transparent 50%), #1a0505',
+    'crystal-arena': 'radial-gradient(circle at 70% 30%, rgba(233,213,255,0.35), transparent 45%), #0a1020',
+  }
+  return map[arena] ?? map['neon-colosseum']!
+}
+
+export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onExit, onRematch }: VersusArenaProps) {
+  const fxA = useMemo(() => getAbilityFx(fighterA), [fighterA])
+  const fxB = useMemo(() => getAbilityFx(fighterB), [fighterB])
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const keysRef = useRef<Set<string>>(new Set())
+  const p1Ref = useRef<FighterState>(makeFighter(180, GROUND_Y, 1))
+  const p2Ref = useRef<FighterState>(makeFighter(ARENA_W - 180, GROUND_Y, -1))
+  const timeRef = useRef(MATCH_SECONDS)
+  const outcomeRef = useRef<Outcome>(null)
+  const fxId = useRef(0)
+  const spaceTapRef = useRef(0)
+
+  const [p1, setP1] = useState(() => makeFighter(180, GROUND_Y, 1))
+  const [p2, setP2] = useState(() => makeFighter(ARENA_W - 180, GROUND_Y, -1))
+  const [timeLeft, setTimeLeft] = useState(MATCH_SECONDS)
+  const [outcome, setOutcome] = useState<Outcome>(null)
+  const [shake, setShake] = useState(0)
+  const [fxEvents, setFxEvents] = useState<FxEvent[]>([])
+  const [lastGate, setLastGate] = useState(VERSUS_RULES_COPY)
+  const [focused, setFocused] = useState(true)
+  const [tick, setTick] = useState(0)
+
+  const resetMatch = useCallback(() => {
+    p1Ref.current = makeFighter(180, GROUND_Y, 1)
+    p2Ref.current = makeFighter(ARENA_W - 180, GROUND_Y, -1)
+    timeRef.current = MATCH_SECONDS
+    outcomeRef.current = null
+    setP1({ ...p1Ref.current })
+    setP2({ ...p2Ref.current })
+    setTimeLeft(MATCH_SECONDS)
+    setOutcome(null)
+    setFxEvents([])
+    setLastGate(VERSUS_RULES_COPY)
+    setShake(0)
+    wrapRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    resetMatch()
+  }, [fighterA.id, fighterB.id, resetMatch])
+
+  const spawnFx = useCallback((ev: Omit<FxEvent, 'id'>) => {
+    const id = (fxId.current += 1)
+    setFxEvents((list) => [...list.slice(-10), { ...ev, id }])
+    window.setTimeout(() => {
+      setFxEvents((list) => list.filter((e) => e.id !== id))
+    }, 520)
+  }, [])
+
+  const applyHit = useCallback(
+    (attacker: 'p1' | 'p2', kind: HitKind) => {
+      if (outcomeRef.current) return
+      const atk = attacker === 'p1' ? p1Ref.current : p2Ref.current
+      const def = attacker === 'p1' ? p2Ref.current : p1Ref.current
+      const atkHero = attacker === 'p1' ? fighterA : fighterB
+      const defHero = attacker === 'p1' ? fighterB : fighterA
+      const atkFx = attacker === 'p1' ? fxA : fxB
+      const range = kind === 'ability' ? ABILITY_RANGE : PUNCH_RANGE
+      const dx = def.x - atk.x
+      const dy = def.y - atk.y
+      const dist = Math.hypot(dx, dy)
+      const facingOk = kind === 'ability' || Math.sign(dx) === atk.facing || dist < 50
+      if (dist > range || !facingOk) return
+
+      const result = resolveHitDamage(
+        atkHero.power,
+        defHero.power,
+        atkHero.expression,
+        defHero.expression,
+        kind,
+      )
+      setLastGate(result.expression)
+
+      const knock = (kind === 'ability' ? 140 : 70) * (result.blocked ? 0.35 : 1)
+      def.vx += Math.sign(dx || atk.facing) * knock
+      def.vy -= kind === 'ability' ? 60 : 30
+      def.stun = HIT_STUN
+      def.hitFlash = 0.25
+
+      if (result.blocked) {
+        def.blockedFlash = 0.4
+        playFightCue('whoosh')
+        spawnFx({
+          kind: 'block',
+          x: def.x,
+          y: def.y - 40,
+          color: '#94a3b8',
+          label: 'BLOCKED',
+          side: attacker,
+        })
+      } else {
+        def.hp = Math.max(0, def.hp - result.damage)
+        playFightCue(kind === 'ability' ? atkFx.cue : 'impact')
+        setShake((s) => s + (kind === 'ability' ? 2 : 1))
+        spawnFx({
+          kind,
+          x: (atk.x + def.x) / 2,
+          y: (atk.y + def.y) / 2 - 20,
+          color: atkFx.accent,
+          label: kind === 'ability' ? atkFx.label : `-${result.damage}`,
+          side: attacker,
+        })
+      }
+
+      if (def.hp <= 0) {
+        outcomeRef.current = attacker
+        setOutcome(attacker)
+        playFightCue('reveal')
+      }
+    },
+    [fighterA, fighterB, fxA, fxB, spawnFx],
+  )
+
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+
+    const tryAction = (who: 'p1' | 'p2', kind: HitKind) => {
+      if (outcomeRef.current) return
+      const f = who === 'p1' ? p1Ref.current : p2Ref.current
+      if (kind === 'punch') {
+        if (f.punchCd > 0) return
+        f.punchCd = PUNCH_COOLDOWN
+        f.punching = 0.22
+        playFightCue('whoosh')
+        applyHit(who, 'punch')
+      } else {
+        if (f.abilityCd > 0) return
+        f.abilityCd = ABILITY_COOLDOWN
+        f.abilitying = 0.45
+        applyHit(who, 'ability')
+      }
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return
+      const key = e.key.toLowerCase()
+      if (P1_KEYS.has(key) || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'Space') {
+        e.preventDefault()
+      }
+      keysRef.current.add(key)
+      if (e.code === 'Space') keysRef.current.add(' ')
+      if (e.key === 'Shift' || e.code.startsWith('Shift')) keysRef.current.add('shift')
+
+      // Double-tap Space → fly toggle for P1
+      if (e.code === 'Space' && !outcomeRef.current) {
+        const now = performance.now()
+        if (now - spaceTapRef.current < 280) {
+          p1Ref.current.flying = !p1Ref.current.flying
+          if (p1Ref.current.flying) p1Ref.current.vy = -80
+        }
+        spaceTapRef.current = now
+      }
+
+      // Edge-triggered combat (reliable vs RAF polling)
+      if (key === 't') tryAction('p1', 'punch')
+      if (key === 'y') tryAction('p1', 'ability')
+      if (key === 'enter') tryAction('p2', 'punch')
+      if (key === 'shift' || e.code.startsWith('Shift')) tryAction('p2', 'ability')
+    }
+    const onKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase()
+      keysRef.current.delete(key)
+      if (e.code === 'Space') keysRef.current.delete(' ')
+      if (e.key === 'Shift' || e.code.startsWith('Shift')) keysRef.current.delete('shift')
+    }
+
+    el.addEventListener('keydown', onKeyDown)
+    el.addEventListener('keyup', onKeyUp)
+    el.focus()
+    return () => {
+      el.removeEventListener('keydown', onKeyDown)
+      el.removeEventListener('keyup', onKeyUp)
+    }
+  }, [applyHit])
+
+  useEffect(() => {
+    let raf = 0
+    let last = performance.now()
+    let uiAccum = 0
+
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+      uiAccum += dt
+
+      if (!outcomeRef.current) {
+        timeRef.current = Math.max(0, timeRef.current - dt)
+        if (timeRef.current <= 0) {
+          const a = p1Ref.current.hp
+          const b = p2Ref.current.hp
+          const out: Outcome = a > b ? 'p1' : b > a ? 'p2' : 'draw'
+          outcomeRef.current = out
+          setOutcome(out)
+          playFightCue(out === 'draw' ? 'draw' : 'reveal')
+        }
+      }
+
+      const keys = keysRef.current
+      if (!outcomeRef.current) {
+        integrateFighter(
+          p1Ref.current,
+          dt,
+          {
+            left: keys.has('a'),
+            right: keys.has('d'),
+            up: keys.has('w'),
+            down: keys.has('s'),
+            jump: keys.has(' '),
+            flyHold: keys.has(' '),
+          },
+          true,
+        )
+
+        integrateFighter(
+          p2Ref.current,
+          dt,
+          {
+            left: keys.has('arrowleft'),
+            right: keys.has('arrowright'),
+            up: keys.has('arrowup'),
+            down: keys.has('arrowdown'),
+            jump: keys.has('arrowup'),
+            flyHold: keys.has('arrowup'),
+          },
+          false,
+        )
+
+        // Face each other when close
+        if (Math.abs(p1Ref.current.x - p2Ref.current.x) > 8) {
+          p1Ref.current.facing = p1Ref.current.x < p2Ref.current.x ? 1 : -1
+          p2Ref.current.facing = p2Ref.current.x < p1Ref.current.x ? 1 : -1
+        }
+      } else {
+        decayTimers(p1Ref.current, dt)
+        decayTimers(p2Ref.current, dt)
+      }
+
+      if (uiAccum >= 1 / 30) {
+        uiAccum = 0
+        setP1({ ...p1Ref.current })
+        setP2({ ...p2Ref.current })
+        setTimeLeft(Math.ceil(timeRef.current))
+        setTick((t) => t + 1)
+        setShake((s) => (s > 0 ? s * 0.7 : 0))
+      }
+
+      raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [applyHit])
+
+  const winnerLabel =
+    outcome === 'p1'
+      ? fighterA.name
+      : outcome === 'p2'
+        ? fighterB.name
+        : outcome === 'draw'
+          ? 'DRAW'
+          : null
+
+  return (
+    <div className="space-y-4">
+      <div
+        ref={wrapRef}
+        tabIndex={0}
+        role="application"
+        aria-label="2 player versus arena"
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className="relative outline-none"
+      >
+        {!focused && !outcome && (
+          <button
+            type="button"
+            className="absolute inset-0 z-40 flex items-center justify-center rounded-3xl bg-black/70 text-sm tracking-widest text-sky-200"
+            onClick={() => wrapRef.current?.focus()}
+          >
+            CLICK ARENA TO FOCUS CONTROLS
+          </button>
+        )}
+
+        {/* HUD */}
+        <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <HudBar hero={fighterA} hp={p1.hp} fx={fxA} align="left" label="P1" />
+          <div className="text-center">
+            <div className="font-display text-2xl text-amber-300 tabular-nums">{timeLeft}s</div>
+            <div className="text-[10px] tracking-widest text-slate-500">VS</div>
+          </div>
+          <HudBar hero={fighterB} hp={p2.hp} fx={fxB} align="right" label="P2" />
+        </div>
+
+        <motion.div
+          className="relative overflow-hidden rounded-3xl border border-white/10"
+          style={{ background: arenaBg(arena), height: ARENA_H, maxWidth: ARENA_W, margin: '0 auto' }}
+          animate={shake > 0.4 ? { x: [0, -4, 4, -2, 2, 0], y: [0, 2, -2, 0] } : { x: 0, y: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          {/* Ground line */}
+          <div
+            className="absolute inset-x-0 bottom-0 h-[72px] border-t border-white/10"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(15,23,42,0.2), rgba(2,6,23,0.85)), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(56,189,248,0.06) 40px, rgba(56,189,248,0.06) 41px)',
+            }}
+          />
+
+          {/* Math / gate readout */}
+          <div className="absolute left-1/2 top-3 z-20 w-[min(90%,420px)] -translate-x-1/2 rounded-xl border border-sky-400/20 bg-black/55 px-3 py-2 text-center text-[11px] text-sky-200/90">
+            <div className="flex justify-center gap-3 font-mono text-xs">
+              <span className="text-sky-300">
+                <MathExpression base={fighterA.base} exponent={fighterA.exponent} power={fighterA.power} showPower />
+              </span>
+              <span className="text-slate-500">vs</span>
+              <span className="text-rose-300">
+                <MathExpression base={fighterB.base} exponent={fighterB.exponent} power={fighterB.power} showPower />
+              </span>
+            </div>
+            <p className="mt-1 text-[10px] tracking-wide text-slate-400">{lastGate}</p>
+          </div>
+
+          <FighterSprite
+            hero={fighterA}
+            fx={fxA}
+            state={p1}
+            side="p1"
+            tick={tick}
+          />
+          <FighterSprite
+            hero={fighterB}
+            fx={fxB}
+            state={p2}
+            side="p2"
+            tick={tick}
+          />
+
+          <AnimatePresence>
+            {fxEvents.map((ev) => (
+              <motion.div
+                key={ev.id}
+                className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 font-display text-xs tracking-wider"
+                style={{ left: ev.x, top: ev.y, color: ev.color, textShadow: `0 0 10px ${ev.color}` }}
+                initial={{ opacity: 0, scale: 0.6, y: 8 }}
+                animate={{ opacity: 1, scale: 1.1, y: -12 }}
+                exit={{ opacity: 0 }}
+              >
+                {ev.label.toUpperCase()}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {outcome && (
+              <motion.div
+                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/75 px-4 text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="font-display text-3xl text-amber-300">
+                  {outcome === 'draw' ? 'SPECTACULAR DRAW' : `WINNER: ${winnerLabel}`}
+                </div>
+                <p className="mt-2 max-w-md text-sm text-slate-300">
+                  {fighterA.expression}={fighterA.power} vs {fighterB.expression}={fighterB.power}
+                  {outcome === 'draw'
+                    ? ' — equal remaining HP (or both zero).'
+                    : ` — ${VERSUS_RULES_COPY}`}
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <button type="button" className="btn-primary text-xs" onClick={onRematch ?? resetMatch}>
+                    REMATCH
+                  </button>
+                  {onExit && (
+                    <button type="button" className="btn-secondary text-xs" onClick={onExit}>
+                      CHANGE FIGHTERS
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+
+      {/* Controls legend */}
+      <div className="mx-auto grid max-w-4xl gap-3 rounded-2xl border border-white/10 bg-black/40 p-4 text-xs text-slate-300 sm:grid-cols-2">
+        <div>
+          <div className="font-display tracking-widest text-sky-300">PLAYER 1</div>
+          <p className="mt-1">
+            <kbd className="kbd">W</kbd>
+            <kbd className="kbd">A</kbd>
+            <kbd className="kbd">S</kbd>
+            <kbd className="kbd">D</kbd> move · <kbd className="kbd">Space</kbd> jump / double-tap fly ·{' '}
+            <kbd className="kbd">T</kbd> punch · <kbd className="kbd">Y</kbd> ability
+          </p>
+        </div>
+        <div>
+          <div className="font-display tracking-widest text-rose-300">PLAYER 2</div>
+          <p className="mt-1">
+            <kbd className="kbd">←</kbd>
+            <kbd className="kbd">→</kbd>
+            <kbd className="kbd">↑</kbd>
+            <kbd className="kbd">↓</kbd> move / freefly · <kbd className="kbd">Enter</kbd> punch ·{' '}
+            <kbd className="kbd">Shift</kbd> ability
+          </p>
+        </div>
+        <p className="sm:col-span-2 text-[11px] text-slate-500">{VERSUS_RULES_COPY}</p>
+      </div>
+    </div>
+  )
+}
+
+function makeFighter(x: number, y: number, facing: 1 | -1): FighterState {
+  return {
+    x,
+    y,
+    vx: 0,
+    vy: 0,
+    facing,
+    flying: false,
+    hp: MAX_HP,
+    punchCd: 0,
+    abilityCd: 0,
+    stun: 0,
+    punching: 0,
+    abilitying: 0,
+    hitFlash: 0,
+    blockedFlash: 0,
+  }
+}
+
+function decayTimers(f: FighterState, dt: number) {
+  f.punchCd = Math.max(0, f.punchCd - dt)
+  f.abilityCd = Math.max(0, f.abilityCd - dt)
+  f.stun = Math.max(0, f.stun - dt)
+  f.punching = Math.max(0, f.punching - dt)
+  f.abilitying = Math.max(0, f.abilitying - dt)
+  f.hitFlash = Math.max(0, f.hitFlash - dt)
+  f.blockedFlash = Math.max(0, f.blockedFlash - dt)
+}
+
+function integrateFighter(
+  f: FighterState,
+  dt: number,
+  input: {
+    left: boolean
+    right: boolean
+    up: boolean
+    down: boolean
+    jump: boolean
+    flyHold: boolean
+  },
+  isP1: boolean,
+) {
+  decayTimers(f, dt)
+  if (f.stun > 0) {
+    f.x = clamp(f.x + f.vx * dt, FIGHTER_R, ARENA_W - FIGHTER_R)
+    f.y = clamp(f.y + f.vy * dt, FIGHTER_R + 40, GROUND_Y)
+    f.vx *= 0.85
+    f.vy *= 0.9
+    return
+  }
+
+  // Fly / freeflight
+  if (isP1) {
+    if (input.flyHold && f.flying) {
+      f.vy = input.up ? -FLY_SPEED : input.down ? FLY_SPEED : f.vy * 0.9
+    } else if (!f.flying) {
+      if (input.jump && f.y >= GROUND_Y - 1) f.vy = JUMP_VY
+    }
+  } else {
+    // P2: Up/Down freeflight when airborne or holding Up to rise
+    if (input.up) {
+      f.flying = true
+      f.vy = -FLY_SPEED
+    } else if (input.down && (f.flying || f.y < GROUND_Y - 2)) {
+      f.flying = true
+      f.vy = FLY_SPEED
+    } else if (f.y >= GROUND_Y - 1) {
+      f.flying = false
+    }
+  }
+
+  let ax = 0
+  if (input.left) ax -= 1
+  if (input.right) ax += 1
+  const speed = f.flying ? FLY_SPEED : MOVE_SPEED
+  f.vx = ax * speed
+
+  if (isP1 && f.flying) {
+    if (input.up) f.vy = -FLY_SPEED
+    else if (input.down) f.vy = FLY_SPEED
+    else f.vy *= 0.92
+  }
+
+  if (!f.flying) {
+    f.vy += GRAVITY * dt
+  } else if (isP1 && !input.flyHold && !input.up && !input.down) {
+    // gentle hover
+    f.vy *= 0.96
+  }
+
+  f.x = clamp(f.x + f.vx * dt, FIGHTER_R, ARENA_W - FIGHTER_R)
+  f.y = clamp(f.y + f.vy * dt, FIGHTER_R + 40, GROUND_Y)
+
+  if (f.y >= GROUND_Y - 0.5) {
+    f.y = GROUND_Y
+    f.vy = 0
+    if (!input.flyHold && !(input.up && !isP1)) f.flying = false
+  }
+}
+
+function HudBar({
+  hero,
+  hp,
+  fx,
+  align,
+  label,
+}: {
+  hero: Hero
+  hp: number
+  fx: ReturnType<typeof getAbilityFx>
+  align: 'left' | 'right'
+  label: string
+}) {
+  return (
+    <div className={align === 'right' ? 'text-right' : 'text-left'}>
+      <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400" style={{ justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
+        <span style={{ color: fx.accent }}>{label}</span>
+        <span className="font-display text-xs" style={{ color: hero.mainColor }}>
+          {hero.name}
+        </span>
+      </div>
+      <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-slate-800">
+        <div
+          className="h-full transition-[width] duration-150"
+          style={{
+            width: `${(hp / MAX_HP) * 100}%`,
+            background: `linear-gradient(90deg, ${hero.secondaryColor}, ${hero.accentColor})`,
+            marginLeft: align === 'right' ? 'auto' : undefined,
+          }}
+        />
+      </div>
+      <div className="mt-0.5 font-mono text-[10px] text-slate-500">
+        <MathExpression base={hero.base} exponent={hero.exponent} power={hero.power} showPower />
+      </div>
+    </div>
+  )
+}
+
+function FighterSprite({
+  hero,
+  fx,
+  state,
+  side,
+  tick,
+}: {
+  hero: Hero
+  fx: ReturnType<typeof getAbilityFx>
+  state: FighterState
+  side: 'p1' | 'p2'
+  tick: number
+}) {
+  const face = state.facing
+  return (
+    <div
+      className="absolute z-10"
+      style={{
+        left: state.x,
+        top: state.y,
+        width: 88,
+        marginLeft: -44,
+        marginTop: -88,
+        filter:
+          state.hitFlash > 0
+            ? 'brightness(1.8)'
+            : state.blockedFlash > 0
+              ? 'grayscale(0.4) brightness(1.2)'
+              : undefined,
+      }}
+    >
+      <div style={{ transform: `scaleX(${face})` }} className="relative">
+        {/* Ability beam toward facing direction */}
+        {state.abilitying > 0 && (
+          <div
+            className="pointer-events-none absolute left-1/2 top-[42%] h-3 -translate-y-1/2 rounded-full"
+            style={{
+              width: ABILITY_RANGE * 0.85,
+              background: `linear-gradient(90deg, ${fx.accent}, ${fx.secondary}88, transparent)`,
+              boxShadow: `0 0 18px ${fx.secondary}`,
+              opacity: 0.9,
+              transformOrigin: 'left center',
+            }}
+          />
+        )}
+        {/* Punch fist */}
+        {state.punching > 0 && (
+          <div
+            className="pointer-events-none absolute left-1/2 top-[42%] h-3.5 w-3.5 -translate-y-1/2 rounded-md"
+            style={{
+              background: fx.primary,
+              boxShadow: `0 0 10px ${fx.accent}`,
+              transform: 'translateX(28px)',
+            }}
+          />
+        )}
+        {state.flying && (
+          <div
+            className="pointer-events-none absolute left-1/2 top-full h-8 w-10 -translate-x-1/2 rounded-full blur-md"
+            style={{ background: `${fx.secondary}66` }}
+          />
+        )}
+        <HeroArt hero={hero} size={88} animated={state.punching > 0 || state.abilitying > 0 || tick % 20 < 10} />
+      </div>
+      <div className="mt-0.5 text-center font-display text-[9px] tracking-wider" style={{ color: fx.accent }}>
+        {side.toUpperCase()}
+      </div>
+    </div>
+  )
+}
