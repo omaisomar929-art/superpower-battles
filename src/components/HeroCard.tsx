@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { Hero } from '../heroes/types'
 import { HeroArt } from '../heroes/HeroArt'
 import { formatPower } from '../mathEngine'
+import { MathExpression } from './MathExpression'
 
 interface HeroCardProps {
   hero: Hero
@@ -15,9 +16,9 @@ export function HeroCard({ hero, selected, onSelect, compact }: HeroCardProps) {
 
   const content = (
     <div
-      className={`panel rounded-2xl p-4 transition hover:border-fuchsia-400/40 ${
-        selected ? 'ring-2 ring-fuchsia-400 border-fuchsia-400/50' : ''
-      } ${onSelect ? 'cursor-pointer' : ''}`}
+      className={`panel rounded-2xl p-4 transition hover:border-sky-400/40 ${
+        selected ? 'ring-2 ring-sky-400 border-sky-400/50' : ''
+      } ${onSelect ? 'cursor-pointer' : ''} ${hero.power === 0 ? 'border-slate-500/40' : ''}`}
       onClick={() => onSelect?.(hero)}
       onKeyDown={(e) => {
         if (onSelect && (e.key === 'Enter' || e.key === ' ')) onSelect(hero)
@@ -29,8 +30,13 @@ export function HeroCard({ hero, selected, onSelect, compact }: HeroCardProps) {
         <HeroArt hero={hero} size={compact ? 96 : 140} />
       </div>
       <h3 className="mt-2 font-display text-sm sm:text-base text-center text-white">{hero.name}</h3>
-      <p className="text-center font-mono text-sky-300 text-sm">{hero.expression}</p>
-      <p className="text-center text-amber-300 text-xs mt-1">POWER {formatPower(hero.power)}</p>
+      <p className="text-center text-sky-300 text-sm">
+        <MathExpression base={hero.base} exponent={hero.exponent} />
+      </p>
+      <p className="text-center text-amber-300 text-xs mt-1">
+        POWER {formatPower(hero.power)}
+        {hero.power === 0 ? ' · NULL' : ''}
+      </p>
       {!compact && (
         <>
           <div className="mt-3 h-2 rounded-full bg-slate-800 overflow-hidden">

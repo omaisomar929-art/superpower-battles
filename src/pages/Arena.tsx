@@ -34,7 +34,7 @@ export function Arena() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="font-display text-3xl tracking-widest text-fuchsia-300">ARENA</h1>
+      <h1 className="font-display text-3xl tracking-widest text-sky-300">ARENA</h1>
       <p className="mt-2 text-slate-400">
         Animated fight sequence. HP bars are presentation only — the math decides the winner.
       </p>

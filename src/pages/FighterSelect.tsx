@@ -26,7 +26,12 @@ export function FighterSelect() {
   const list = useMemo(() => {
     const q = query.toLowerCase()
     if (!q) return HEROES
-    return HEROES.filter((h) => h.name.toLowerCase().includes(q) || h.expression.includes(q))
+    return HEROES.filter(
+      (h) =>
+        h.name.toLowerCase().includes(q) ||
+        h.expression.includes(q) ||
+        `${h.base}^${h.exponent}`.includes(q),
+    )
   }, [query])
 
   function selectHero(hero: Hero) {

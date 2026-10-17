@@ -1,9 +1,21 @@
+const SUPERSCRIPTS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'] as const
+
+export function toSuperscript(value: number): string {
+  return String(value)
+    .split('')
+    .map((digit) => {
+      const n = Number(digit)
+      return Number.isInteger(n) ? SUPERSCRIPTS[n] : digit
+    })
+    .join('')
+}
+
 export function calculatePower(base: number, exponent: number): number {
   if (!Number.isInteger(base) || !Number.isInteger(exponent)) {
     throw new Error('Base and exponent must be integers')
   }
-  if (base < 1 || base > 10) {
-    throw new Error('Base must be between 1 and 10')
+  if (base < 0 || base > 10) {
+    throw new Error('Base must be between 0 and 10')
   }
   if (exponent < 1 || exponent > 5) {
     throw new Error('Exponent must be between 1 and 5')
@@ -11,7 +23,13 @@ export function calculatePower(base: number, exponent: number): number {
   return base ** exponent
 }
 
+/** Mathematical notation with Unicode superscripts, e.g. 2³ */
 export function formatExpression(base: number, exponent: number): string {
+  return `${base}${toSuperscript(exponent)}`
+}
+
+/** ASCII caret form for search / legacy, e.g. 2^3 */
+export function formatExpressionAscii(base: number, exponent: number): string {
   return `${base}^${exponent}`
 }
 

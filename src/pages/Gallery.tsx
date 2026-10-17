@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { HEROES, getHeroById } from '../heroes/data'
+import { HEROES, TOTAL_HERO_COUNT, getHeroById } from '../heroes/data'
 import { HeroCard } from '../components/HeroCard'
 import { HeroArt } from '../heroes/HeroArt'
-import { formatPower } from '../mathEngine'
+import { MathExpression } from '../components/MathExpression'
+import { formatExpressionAscii, formatExpression } from '../mathEngine'
 
 type SortKey = 'power' | 'name' | 'base' | 'exponent'
 
@@ -24,6 +25,8 @@ export function Gallery() {
         (h) =>
           h.name.toLowerCase().includes(q) ||
           h.expression.includes(q) ||
+          formatExpressionAscii(h.base, h.exponent).includes(q) ||
+          formatExpression(h.base, h.exponent).includes(q) ||
           h.signatureAttack.toLowerCase().includes(q) ||
           h.fightingStyle.includes(q),
       )
@@ -52,8 +55,13 @@ export function Gallery() {
           </div>
           <div>
             <h1 className="font-display text-3xl text-white">{detail.name}</h1>
-            <p className="mt-1 font-mono text-2xl text-sky-300">
-              {detail.expression} = {formatPower(detail.power)}
+            <p className="mt-1 text-2xl text-sky-300">
+              <MathExpression
+                base={detail.base}
+                exponent={detail.exponent}
+                power={detail.power}
+                showPower
+              />
             </p>
             <p className="mt-3 text-slate-300">{detail.tagline}</p>
             <dl className="mt-6 grid gap-3 sm:grid-cols-2 text-sm">
@@ -101,8 +109,10 @@ export function Gallery() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="font-display text-3xl tracking-widest text-fuchsia-300">50 HEROES</h1>
-      <p className="mt-2 text-slate-400">Every base 1–10 and exponent 1–5. Search, sort, and inspect.</p>
+      <h1 className="font-display text-3xl tracking-widest text-sky-300">{TOTAL_HERO_COUNT} HEROES</h1>
+      <p className="mt-2 text-slate-400">
+        Bases 1–10 × exponents 1–5, plus five null-power void fighters (0¹–0⁵). Search, sort, and inspect.
+      </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
         <input
@@ -127,9 +137,10 @@ export function Gallery() {
           className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm"
         >
           <option value="all">All bases</option>
-          {Array.from({ length: 10 }, (_, i) => i + 1).map((b) => (
+          {Array.from({ length: 11 }, (_, i) => i).map((b) => (
             <option key={b} value={b}>
               Base {b}
+              {b === 0 ? ' (null)' : ''}
             </option>
           ))}
         </select>

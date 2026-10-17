@@ -18,6 +18,81 @@ interface HeroSeed {
 }
 
 const NAMES: Record<string, HeroSeed> = {
+  '0-1': {
+    name: 'Null Spark',
+    costume: 'Ash-gray void suit with a hollow zero crest',
+    signatureAttack: 'Zero Pulse',
+    defensiveAbility: 'Absence Field',
+    fightingStyle: 'assassin',
+    victoryAnimation: 'erases the arena into silent black',
+    defeatAnimation: 'collapses into a vanishing point',
+    visualEffect: 'hollow zero rings',
+    mainColor: '#94a3b8',
+    secondaryColor: '#334155',
+    accentColor: '#0f172a',
+    visuals: { silhouette: 'nimble', weapon: 'fists', mask: 'half', cape: false, horns: false, aura: 'void' },
+    tagline: 'Zero to the first — power that never arrives.',
+  },
+  '0-2': {
+    name: 'Void Echo',
+    costume: 'Mirrored black armor with empty twin voids',
+    signatureAttack: 'Silent Twin',
+    defensiveAbility: 'Null Mirror',
+    fightingStyle: 'mystic',
+    victoryAnimation: 'duplicates into two empty silhouettes then fades',
+    defeatAnimation: 'echoes collapse into one speck of dust',
+    visualEffect: 'inverted afterimages',
+    mainColor: '#cbd5e1',
+    secondaryColor: '#1e293b',
+    accentColor: '#020617',
+    visuals: { silhouette: 'cloak', weapon: 'orb', mask: 'hood', cape: true, horns: false, aura: 'shadow' },
+    tagline: 'Zero squared — still nothing, twice as quiet.',
+  },
+  '0-3': {
+    name: 'Hollow Cube',
+    costume: 'Wireframe cube shell over a starless robe',
+    signatureAttack: 'Collapse Fold',
+    defensiveAbility: 'Empty Volume',
+    fightingStyle: 'guardian',
+    victoryAnimation: 'folds the arena into a hollow cube then opens empty',
+    defeatAnimation: 'wireframe snaps and falls flat',
+    visualEffect: 'collapsing wireframe cubes',
+    mainColor: '#a78bfa',
+    secondaryColor: '#312e81',
+    accentColor: '#0b1020',
+    visuals: { silhouette: 'robe', weapon: 'staff', mask: 'visor', cape: false, horns: false, aura: 'void' },
+    tagline: 'Zero cubed — volume without mass.',
+  },
+  '0-4': {
+    name: 'Null Tessera',
+    costume: 'Fractured mosaic of missing tiles',
+    signatureAttack: 'Gap Strike',
+    defensiveAbility: 'Missing Lattice',
+    fightingStyle: 'striker',
+    victoryAnimation: 'tiles vanish until only silence remains',
+    defeatAnimation: 'gaps swallow the fighter whole',
+    visualEffect: 'vanishing mosaic panes',
+    mainColor: '#e2e8f0',
+    secondaryColor: '#475569',
+    accentColor: '#111827',
+    visuals: { silhouette: 'armor', weapon: 'gauntlets', mask: 'none', cape: false, horns: false, aura: 'shadow' },
+    tagline: 'Zero to the fourth — a mosaic of absence.',
+  },
+  '0-5': {
+    name: 'Absolute Zero',
+    costume: 'Black ice cloak with a frozen zero halo',
+    signatureAttack: 'Entropy Bloom',
+    defensiveAbility: 'Heat Death Halo',
+    fightingStyle: 'berserker',
+    victoryAnimation: 'freezes the world into a perfect empty zero',
+    defeatAnimation: 'halo shatters into cold dust',
+    visualEffect: 'freezing null rings',
+    mainColor: '#f8fafc',
+    secondaryColor: '#38bdf8',
+    accentColor: '#020617',
+    visuals: { silhouette: 'cape', weapon: 'orb', mask: 'full', cape: true, horns: true, aura: 'ice' },
+    tagline: 'Zero to the fifth — the coldest nothing.',
+  },
   '1-1': {
     name: 'Unit Spark',
     costume: 'Minimalist white bodysuit with a glowing numeral crest',
@@ -801,13 +876,22 @@ function buildHero(base: number, exponent: number): Hero {
 
 export const HEROES: Hero[] = (() => {
   const list: Hero[] = []
+  // Classic roster: bases 1–10 × exponents 1–5 (50 heroes)
   for (let base = 1; base <= 10; base += 1) {
     for (let exponent = 1; exponent <= 5; exponent += 1) {
       list.push(buildHero(base, exponent))
     }
   }
+  // Null / void roster: base 0 × exponents 1–5 (power always 0)
+  for (let exponent = 1; exponent <= 5; exponent += 1) {
+    list.push(buildHero(0, exponent))
+  }
   return list
 })()
+
+export const CLASSIC_HERO_COUNT = 50
+export const ZERO_HERO_COUNT = 5
+export const TOTAL_HERO_COUNT = CLASSIC_HERO_COUNT + ZERO_HERO_COUNT
 
 export function getHeroById(id: string): Hero | undefined {
   return HEROES.find((hero) => hero.id === id)
