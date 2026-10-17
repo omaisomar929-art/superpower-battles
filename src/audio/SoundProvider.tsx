@@ -6,6 +6,7 @@ import {
   setMuted,
   startAmbient,
   stopAmbient,
+  tryAutoplayAmbient,
 } from './soundEngine'
 
 interface SoundContextValue {
@@ -28,19 +29,25 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (muted) return undefined
 
-    // Try immediate play (works if previously unmuted / autoplay allowed).
-    void ensureAudioUnlocked()
+    let cancelled = false
 
-    const unlock = () => {
+    // Prefer unmuted autoplay immediately; fall back to muted play or first gesture.
+    void tryAutoplayAmbient()
+
+    const onGesture = () => {
+      if (cancelled) return
+      // Unmute muted-autoplay, or start play if autoplay was fully blocked.
       void ensureAudioUnlocked()
-      window.removeEventListener('pointerdown', unlock)
-      window.removeEventListener('keydown', unlock)
+      window.removeEventListener('pointerdown', onGesture)
+      window.removeEventListener('keydown', onGesture)
     }
-    window.addEventListener('pointerdown', unlock)
-    window.addEventListener('keydown', unlock)
+    window.addEventListener('pointerdown', onGesture)
+    window.addEventListener('keydown', onGesture)
+
     return () => {
-      window.removeEventListener('pointerdown', unlock)
-      window.removeEventListener('keydown', unlock)
+      cancelled = true
+      window.removeEventListener('pointerdown', onGesture)
+      window.removeEventListener('keydown', onGesture)
     }
   }, [muted])
 

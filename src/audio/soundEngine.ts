@@ -5,6 +5,9 @@
 
 type FightCue = 'intro' | 'whoosh' | 'impact' | 'blast' | 'clash' | 'reveal' | 'draw'
 
+/** Result of attempting BGM autoplay on mount. */
+export type AutoplayResult = 'playing' | 'muted-playing' | 'blocked' | 'skipped'
+
 /** Skip the opening; every play and every loop begins here. */
 export const BGM_LOOP_START_SEC = 35
 
@@ -16,6 +19,8 @@ let bgAudio: HTMLAudioElement | null = null
 let muted = false
 let ambientDesired = true
 let loopHandlerAttached = false
+/** True while playing muted only to bypass autoplay policy; awaiting first gesture to unmute. */
+let awaitingGestureUnmute = false
 
 function getCtx(): AudioContext {
   if (!sharedCtx) {
@@ -44,10 +49,28 @@ function getBgAudio(): HTMLAudioElement {
   return bgAudio
 }
 
-function seekToLoopStart(audio: HTMLAudioElement): void {
+/** Force playback cursor to the loop start (used on mount / explicit start). */
+function forceLoopStart(audio: HTMLAudioElement): void {
+  audio.currentTime = BGM_LOOP_START_SEC
+}
+
+/** If the browser ignored a prior seek and is still in the intro, jump to 35s. */
+function ensurePastIntro(audio: HTMLAudioElement): void {
   if (audio.currentTime < BGM_LOOP_START_SEC) {
     audio.currentTime = BGM_LOOP_START_SEC
   }
+}
+
+async function waitForMetadata(audio: HTMLAudioElement): Promise<void> {
+  if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) return
+  await new Promise<void>((resolve) => {
+    const onMeta = () => {
+      audio.removeEventListener('loadedmetadata', onMeta)
+      resolve()
+    }
+    audio.addEventListener('loadedmetadata', onMeta)
+    audio.load()
+  })
 }
 
 function pauseBg(): void {
@@ -62,11 +85,16 @@ export function isMuted(): boolean {
 
 export function setMuted(value: boolean): void {
   muted = value
+  awaitingGestureUnmute = false
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('power-battles-muted', value ? '1' : '0')
   }
   if (muted) {
-    pauseBg()
+    const audio = bgAudio
+    if (audio) {
+      audio.muted = false
+      pauseBg()
+    }
   } else if (ambientDesired) {
     void startAmbient()
   }
@@ -187,48 +215,108 @@ export function playFightCue(cue: FightCue): void {
 }
 
 /**
- * Start (or resume) the original MP3 BGM from 35s.
- * Respects mute; autoplay may require a prior user gesture.
+ * Start (or resume) the original MP3 BGM from 35s, unmuted.
+ * Respects app mute; may still fail without a user gesture.
  */
 export async function startAmbient(): Promise<void> {
   ambientDesired = true
   if (muted) return
 
   const audio = getBgAudio()
+  await waitForMetadata(audio)
+  if (muted || !ambientDesired) return
 
-  const playFromLoopStart = async () => {
-    if (muted || !ambientDesired) return
-    seekToLoopStart(audio)
-    try {
-      await audio.play()
-      // Some browsers ignore seek before play; re-assert after play starts.
-      seekToLoopStart(audio)
-    } catch {
-      /* autoplay blocked — SoundProvider unlocks on first gesture */
-    }
+  awaitingGestureUnmute = false
+  audio.muted = false
+  forceLoopStart(audio)
+  try {
+    await audio.play()
+    // Some browsers ignore seek before play; re-assert after play starts.
+    ensurePastIntro(audio)
+  } catch {
+    /* autoplay blocked — SoundProvider unlocks on first gesture */
+  }
+}
+
+/**
+ * On mount: seek to 35s, try unmuted play immediately.
+ * If blocked, fall back to muted autoplay (unmute on first gesture).
+ * If that also fails, return 'blocked' so the provider plays on first gesture.
+ */
+export async function tryAutoplayAmbient(): Promise<AutoplayResult> {
+  ambientDesired = true
+  if (muted) return 'skipped'
+
+  const audio = getBgAudio()
+  await waitForMetadata(audio)
+  if (muted || !ambientDesired) return 'skipped'
+
+  forceLoopStart(audio)
+
+  try {
+    audio.muted = false
+    awaitingGestureUnmute = false
+    await audio.play()
+    ensurePastIntro(audio)
+    return 'playing'
+  } catch {
+    /* unmuted autoplay blocked — try muted */
   }
 
-  if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
-    await playFromLoopStart()
-  } else {
-    await new Promise<void>((resolve) => {
-      const onMeta = () => {
-        audio.removeEventListener('loadedmetadata', onMeta)
-        void playFromLoopStart().finally(resolve)
-      }
-      audio.addEventListener('loadedmetadata', onMeta)
-      audio.load()
-    })
+  if (muted || !ambientDesired) return 'skipped'
+
+  try {
+    audio.muted = true
+    forceLoopStart(audio)
+    await audio.play()
+    ensurePastIntro(audio)
+    awaitingGestureUnmute = true
+    return 'muted-playing'
+  } catch {
+    audio.muted = false
+    awaitingGestureUnmute = false
+    return 'blocked'
+  }
+}
+
+/** Unmute element after muted-autoplay fallback (call from a user gesture). */
+export async function unlockAmbientSound(): Promise<void> {
+  if (muted) return
+  const ctx = getCtx()
+  if (ctx.state === 'suspended') await ctx.resume()
+
+  const audio = getBgAudio()
+  audio.muted = false
+  awaitingGestureUnmute = false
+  ambientDesired = true
+
+  if (audio.paused) {
+    forceLoopStart(audio)
+    try {
+      await audio.play()
+      ensurePastIntro(audio)
+    } catch {
+      /* still blocked */
+    }
   }
 }
 
 export function stopAmbient(): void {
   ambientDesired = false
+  awaitingGestureUnmute = false
   pauseBg()
 }
 
 export async function ensureAudioUnlocked(): Promise<void> {
   const ctx = getCtx()
   if (ctx.state === 'suspended') await ctx.resume()
-  if (ambientDesired && !muted) await startAmbient()
+  if (!ambientDesired || muted) return
+  if (awaitingGestureUnmute) {
+    await unlockAmbientSound()
+    return
+  }
+  const audio = getBgAudio()
+  // Already playing with sound — do not restart from 35s on incidental gestures.
+  if (!audio.paused && !audio.muted) return
+  await startAmbient()
 }
