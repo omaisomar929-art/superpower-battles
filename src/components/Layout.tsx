@@ -6,7 +6,7 @@ import { TOTAL_HERO_COUNT } from '../heroes/data'
 const links = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/gallery', label: 'Heroes', icon: Users },
-  { to: '/select', label: 'Fight', icon: Swords },
+  { to: '/select', label: 'Learning', icon: Swords },
   { to: '/versus', label: '2 Player', icon: Gamepad2 },
 ]
 

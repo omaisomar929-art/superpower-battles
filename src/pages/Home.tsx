@@ -92,7 +92,7 @@ export function Home() {
 
         <div className="mt-10 flex flex-col sm:flex-row gap-3">
           <Link to="/select" className="btn-primary">
-            PICK FIGHTERS
+            LEARNING MODE
           </Link>
           <Link to="/versus" className="btn-secondary">
             2 PLAYER

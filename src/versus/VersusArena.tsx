@@ -12,6 +12,7 @@ import {
   resolveHitDamage,
   type HitKind,
 } from './damageRules'
+import { TouchPads, type TouchDir } from './TouchPads'
 
 const ARENA_W = 960
 const ARENA_H = 520
@@ -82,11 +83,17 @@ function arenaBg(arena: string): string {
   return map[arena] ?? map['neon-colosseum']!
 }
 
+const EMPTY_DIR: TouchDir = { left: false, right: false, up: false, down: false }
+
 export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onExit, onRematch }: VersusArenaProps) {
   const fxA = useMemo(() => getAbilityFx(fighterA), [fighterA])
   const fxB = useMemo(() => getAbilityFx(fighterB), [fighterB])
   const wrapRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
   const keysRef = useRef<Set<string>>(new Set())
+  const touchP1Ref = useRef<TouchDir>({ ...EMPTY_DIR })
+  const touchP2Ref = useRef<TouchDir>({ ...EMPTY_DIR })
+  const tryActionRef = useRef<(who: 'p1' | 'p2', kind: HitKind) => void>(() => undefined)
   const p1Ref = useRef<FighterState>(makeFighter(180, GROUND_Y, 1))
   const p2Ref = useRef<FighterState>(makeFighter(ARENA_W - 180, GROUND_Y, -1))
   const timeRef = useRef(MATCH_SECONDS)
@@ -103,6 +110,7 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
   const [lastGate, setLastGate] = useState(VERSUS_RULES_COPY)
   const [focused, setFocused] = useState(true)
   const [tick, setTick] = useState(0)
+  const [scale, setScale] = useState(1)
 
   const resetMatch = useCallback(() => {
     p1Ref.current = makeFighter(180, GROUND_Y, 1)
@@ -122,6 +130,51 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
   useEffect(() => {
     resetMatch()
   }, [fighterA.id, fighterB.id, resetMatch])
+
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    const prevTouch = document.body.style.touchAction
+    document.body.classList.add('versus-fighting')
+    document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
+    return () => {
+      document.body.classList.remove('versus-fighting')
+      document.body.style.overflow = prevOverflow
+      document.body.style.touchAction = prevTouch
+      touchP1Ref.current = { ...EMPTY_DIR }
+      touchP2Ref.current = { ...EMPTY_DIR }
+    }
+  }, [])
+
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const update = () => {
+      const w = el.clientWidth
+      setScale(w > 0 ? Math.min(1, w / ARENA_W) : 1)
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const onTouchDirChange = useCallback((side: 'p1' | 'p2', dir: Partial<TouchDir>, active: boolean) => {
+    const target = side === 'p1' ? touchP1Ref.current : touchP2Ref.current
+    for (const key of Object.keys(dir) as (keyof TouchDir)[]) {
+      if (dir[key]) target[key] = active
+    }
+    // Touch up engages fly for P1 (Space-equivalent hold + fly toggle)
+    if (side === 'p1' && dir.up) {
+      if (active) {
+        p1Ref.current.flying = true
+      }
+    }
+  }, [])
+
+  const onTouchAction = useCallback((side: 'p1' | 'p2', kind: 'punch' | 'ability') => {
+    tryActionRef.current(side, kind)
+  }, [])
 
   const spawnFx = useCallback((ev: Omit<FxEvent, 'id'>) => {
     const id = (fxId.current += 1)
@@ -215,6 +268,7 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
         applyHit(who, 'ability')
       }
     }
+    tryActionRef.current = tryAction
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return
@@ -281,17 +335,21 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
       }
 
       const keys = keysRef.current
+      const t1 = touchP1Ref.current
+      const t2 = touchP2Ref.current
       if (!outcomeRef.current) {
+        const p1Up = keys.has('w') || t1.up
+        const p1FlyHold = keys.has(' ') || t1.up
         integrateFighter(
           p1Ref.current,
           dt,
           {
-            left: keys.has('a'),
-            right: keys.has('d'),
-            up: keys.has('w'),
-            down: keys.has('s'),
-            jump: keys.has(' '),
-            flyHold: keys.has(' '),
+            left: keys.has('a') || t1.left,
+            right: keys.has('d') || t1.right,
+            up: p1Up,
+            down: keys.has('s') || t1.down,
+            jump: keys.has(' ') || t1.up,
+            flyHold: p1FlyHold,
           },
           true,
         )
@@ -300,12 +358,12 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
           p2Ref.current,
           dt,
           {
-            left: keys.has('arrowleft'),
-            right: keys.has('arrowright'),
-            up: keys.has('arrowup'),
-            down: keys.has('arrowdown'),
-            jump: keys.has('arrowup'),
-            flyHold: keys.has('arrowup'),
+            left: keys.has('arrowleft') || t2.left,
+            right: keys.has('arrowright') || t2.right,
+            up: keys.has('arrowup') || t2.up,
+            down: keys.has('arrowdown') || t2.down,
+            jump: keys.has('arrowup') || t2.up,
+            flyHold: keys.has('arrowup') || t2.up,
           },
           false,
         )
@@ -344,8 +402,10 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
           ? 'DRAW'
           : null
 
+  const scaledH = ARENA_H * scale
+
   return (
-    <div className="space-y-4">
+    <div className="versus-arena space-y-3 sm:space-y-4" style={{ touchAction: 'none' }}>
       <div
         ref={wrapRef}
         tabIndex={0}
@@ -354,141 +414,170 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         className="relative outline-none"
+        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
-        {!focused && !outcome && (
-          <button
-            type="button"
-            className="absolute inset-0 z-40 flex items-center justify-center rounded-3xl bg-black/70 text-sm tracking-widest text-sky-200"
-            onClick={() => wrapRef.current?.focus()}
-          >
-            CLICK ARENA TO FOCUS CONTROLS
-          </button>
-        )}
-
         {/* HUD */}
-        <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <HudBar hero={fighterA} hp={p1.hp} fx={fxA} align="left" label="P1" />
+        <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-start gap-2 sm:mb-3 sm:items-center sm:gap-3">
+          <div>
+            <HudBar hero={fighterA} hp={p1.hp} fx={fxA} align="left" label="P1 · LEFT" />
+            <p className="mt-1 hidden text-[10px] leading-snug text-sky-300/80 sm:block">
+              WASD · Space fly · T punch · Y ability
+            </p>
+          </div>
           <div className="text-center">
-            <div className="font-display text-2xl text-amber-300 tabular-nums">{timeLeft}s</div>
+            <div className="font-display text-xl text-amber-300 tabular-nums sm:text-2xl">{timeLeft}s</div>
             <div className="text-[10px] tracking-widest text-slate-500">VS</div>
           </div>
-          <HudBar hero={fighterB} hp={p2.hp} fx={fxB} align="right" label="P2" />
+          <div>
+            <HudBar hero={fighterB} hp={p2.hp} fx={fxB} align="right" label="P2 · RIGHT" />
+            <p className="mt-1 hidden text-[10px] leading-snug text-rose-300/80 sm:block sm:text-right">
+              Arrows · Enter punch · Shift ability
+            </p>
+          </div>
         </div>
 
-        <motion.div
-          className="relative overflow-hidden rounded-3xl border border-white/10"
-          style={{ background: arenaBg(arena), height: ARENA_H, maxWidth: ARENA_W, margin: '0 auto' }}
-          animate={shake > 0.4 ? { x: [0, -4, 4, -2, 2, 0], y: [0, 2, -2, 0] } : { x: 0, y: 0 }}
-          transition={{ duration: 0.18 }}
+        <div
+          ref={stageRef}
+          className="relative mx-auto w-full max-w-[960px] overflow-hidden rounded-2xl border border-white/10 sm:rounded-3xl"
+          style={{ height: scaledH, touchAction: 'none' }}
         >
-          {/* Ground line */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-[72px] border-t border-white/10"
+          <motion.div
+            className="relative overflow-hidden"
             style={{
-              background:
-                'linear-gradient(180deg, rgba(15,23,42,0.2), rgba(2,6,23,0.85)), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(56,189,248,0.06) 40px, rgba(56,189,248,0.06) 41px)',
+              background: arenaBg(arena),
+              width: ARENA_W,
+              height: ARENA_H,
+              transform: `scale(${scale})`,
+              transformOrigin: 'top left',
             }}
-          />
+            animate={shake > 0.4 ? { x: [0, -4, 4, -2, 2, 0], y: [0, 2, -2, 0] } : { x: 0, y: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            {/* Ground line */}
+            <div
+              className="absolute inset-x-0 bottom-0 h-[72px] border-t border-white/10"
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(15,23,42,0.2), rgba(2,6,23,0.85)), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(56,189,248,0.06) 40px, rgba(56,189,248,0.06) 41px)',
+              }}
+            />
 
-          {/* Math / gate readout */}
-          <div className="absolute left-1/2 top-3 z-20 w-[min(90%,420px)] -translate-x-1/2 rounded-xl border border-sky-400/20 bg-black/55 px-3 py-2 text-center text-[11px] text-sky-200/90">
-            <div className="flex justify-center gap-3 font-mono text-xs">
-              <span className="text-sky-300">
-                <MathExpression base={fighterA.base} exponent={fighterA.exponent} power={fighterA.power} showPower />
-              </span>
-              <span className="text-slate-500">vs</span>
-              <span className="text-rose-300">
-                <MathExpression base={fighterB.base} exponent={fighterB.exponent} power={fighterB.power} showPower />
-              </span>
+            {/* Math / gate readout */}
+            <div className="absolute left-1/2 top-3 z-20 w-[min(90%,420px)] -translate-x-1/2 rounded-xl border border-sky-400/20 bg-black/55 px-3 py-2 text-center text-[11px] text-sky-200/90">
+              <div className="flex justify-center gap-3 font-mono text-xs">
+                <span className="text-sky-300">
+                  <MathExpression base={fighterA.base} exponent={fighterA.exponent} power={fighterA.power} showPower />
+                </span>
+                <span className="text-slate-500">vs</span>
+                <span className="text-rose-300">
+                  <MathExpression base={fighterB.base} exponent={fighterB.exponent} power={fighterB.power} showPower />
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] tracking-wide text-slate-400">{lastGate}</p>
             </div>
-            <p className="mt-1 text-[10px] tracking-wide text-slate-400">{lastGate}</p>
-          </div>
 
-          <FighterSprite
-            hero={fighterA}
-            fx={fxA}
-            state={p1}
-            side="p1"
-            tick={tick}
-          />
-          <FighterSprite
-            hero={fighterB}
-            fx={fxB}
-            state={p2}
-            side="p2"
-            tick={tick}
-          />
+            <FighterSprite hero={fighterA} fx={fxA} state={p1} side="p1" tick={tick} />
+            <FighterSprite hero={fighterB} fx={fxB} state={p2} side="p2" tick={tick} />
 
-          <AnimatePresence>
-            {fxEvents.map((ev) => (
-              <motion.div
-                key={ev.id}
-                className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 font-display text-xs tracking-wider"
-                style={{ left: ev.x, top: ev.y, color: ev.color, textShadow: `0 0 10px ${ev.color}` }}
-                initial={{ opacity: 0, scale: 0.6, y: 8 }}
-                animate={{ opacity: 1, scale: 1.1, y: -12 }}
-                exit={{ opacity: 0 }}
-              >
-                {ev.label.toUpperCase()}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+            <AnimatePresence>
+              {fxEvents.map((ev) => (
+                <motion.div
+                  key={ev.id}
+                  className="pointer-events-none absolute z-[25] -translate-x-1/2 -translate-y-1/2 font-display text-xs tracking-wider"
+                  style={{ left: ev.x, top: ev.y, color: ev.color, textShadow: `0 0 10px ${ev.color}` }}
+                  initial={{ opacity: 0, scale: 0.6, y: 8 }}
+                  animate={{ opacity: 1, scale: 1.1, y: -12 }}
+                  exit={{ opacity: 0 }}
+                >
+                  {ev.label.toUpperCase()}
+                </motion.div>
+              ))}
+            </AnimatePresence>
 
-          <AnimatePresence>
-            {outcome && (
-              <motion.div
-                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/75 px-4 text-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <div className="font-display text-3xl text-amber-300">
-                  {outcome === 'draw' ? 'SPECTACULAR DRAW' : `WINNER: ${winnerLabel}`}
-                </div>
-                <p className="mt-2 max-w-md text-sm text-slate-300">
-                  {fighterA.expression}={fighterA.power} vs {fighterB.expression}={fighterB.power}
-                  {outcome === 'draw'
-                    ? ' — equal remaining HP (or both zero).'
-                    : ` — ${VERSUS_RULES_COPY}`}
-                </p>
-                <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  <button type="button" className="btn-primary text-xs" onClick={onRematch ?? resetMatch}>
-                    REMATCH
-                  </button>
-                  {onExit && (
-                    <button type="button" className="btn-secondary text-xs" onClick={onExit}>
-                      CHANGE FIGHTERS
+            <AnimatePresence>
+              {outcome && (
+                <motion.div
+                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/75 px-4 text-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <div className="font-display text-3xl text-amber-300">
+                    {outcome === 'draw' ? 'SPECTACULAR DRAW' : `WINNER: ${winnerLabel}`}
+                  </div>
+                  <p className="mt-2 max-w-md text-sm text-slate-300">
+                    {fighterA.expression}={fighterA.power} vs {fighterB.expression}={fighterB.power}
+                    {outcome === 'draw'
+                      ? ' — equal remaining HP (or both zero).'
+                      : ` — ${VERSUS_RULES_COPY}`}
+                  </p>
+                  <div className="mt-6 flex flex-wrap justify-center gap-3">
+                    <button type="button" className="btn-primary text-xs" onClick={onRematch ?? resetMatch}>
+                      REMATCH
                     </button>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+                    {onExit && (
+                      <button type="button" className="btn-secondary text-xs" onClick={onExit}>
+                        CHANGE FIGHTERS
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {!focused && !outcome && (
+            <button
+              type="button"
+              className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-4 text-center text-xs tracking-widest text-sky-200 sm:text-sm"
+              onClick={() => wrapRef.current?.focus()}
+            >
+              TAP ARENA FOR KEYBOARD · TOUCH PADS READY
+            </button>
+          )}
+
+          {!outcome && (
+            <TouchPads
+              onDirChange={(side, dir, active) => {
+                wrapRef.current?.focus()
+                onTouchDirChange(side, dir, active)
+              }}
+              onAction={(side, kind) => {
+                wrapRef.current?.focus()
+                onTouchAction(side, kind)
+              }}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Controls legend */}
-      <div className="mx-auto grid max-w-4xl gap-3 rounded-2xl border border-white/10 bg-black/40 p-4 text-xs text-slate-300 sm:grid-cols-2">
-        <div>
-          <div className="font-display tracking-widest text-sky-300">PLAYER 1</div>
-          <p className="mt-1">
-            <kbd className="kbd">W</kbd>
-            <kbd className="kbd">A</kbd>
-            <kbd className="kbd">S</kbd>
-            <kbd className="kbd">D</kbd> move · <kbd className="kbd">Space</kbd> jump / double-tap fly ·{' '}
-            <kbd className="kbd">T</kbd> punch · <kbd className="kbd">Y</kbd> ability
+      {/* Separate control panels — P1 left / P2 right */}
+      <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-sky-400/30 bg-sky-500/10 p-3 text-xs text-slate-200 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="font-display tracking-widest text-sky-300">PLAYER 1 · LEFT</div>
+            <span className="rounded bg-sky-500/25 px-2 py-0.5 text-[10px] font-semibold text-sky-100">P1</span>
+          </div>
+          <p className="mt-2 leading-relaxed">
+            <span className="font-semibold text-white">WASD</span> ·{' '}
+            <span className="font-semibold text-white">Space</span> fly ·{' '}
+            <span className="font-semibold text-white">T</span> punch ·{' '}
+            <span className="font-semibold text-white">Y</span> ability
           </p>
+          <p className="mt-1.5 text-[10px] text-sky-200/70">Touch: left d-pad (move + fly) · Punch · Ability</p>
         </div>
-        <div>
-          <div className="font-display tracking-widest text-rose-300">PLAYER 2</div>
-          <p className="mt-1">
-            <kbd className="kbd">←</kbd>
-            <kbd className="kbd">→</kbd>
-            <kbd className="kbd">↑</kbd>
-            <kbd className="kbd">↓</kbd> move / freefly · <kbd className="kbd">Enter</kbd> punch ·{' '}
-            <kbd className="kbd">Shift</kbd> ability
+        <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-slate-200 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="font-display tracking-widest text-rose-300">PLAYER 2 · RIGHT</div>
+            <span className="rounded bg-rose-500/25 px-2 py-0.5 text-[10px] font-semibold text-rose-100">P2</span>
+          </div>
+          <p className="mt-2 leading-relaxed">
+            <span className="font-semibold text-white">Arrows</span> ·{' '}
+            <span className="font-semibold text-white">Enter</span> punch ·{' '}
+            <span className="font-semibold text-white">Shift</span> ability
           </p>
+          <p className="mt-1.5 text-[10px] text-rose-200/70">Touch: right d-pad (move + fly) · Punch · Ability</p>
         </div>
-        <p className="sm:col-span-2 text-[11px] text-slate-500">{VERSUS_RULES_COPY}</p>
+        <p className="text-[11px] text-slate-500 sm:col-span-2">{VERSUS_RULES_COPY}</p>
       </div>
     </div>
   )

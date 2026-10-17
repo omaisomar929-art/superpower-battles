@@ -10,7 +10,7 @@ Pick two of **66 original heroes**:
 - **5 null-base** voids — `0¹`–`0⁵` (power **0**)
 - **11 power-zero void variants** — `0⁰`–`10⁰` with **game power 0** (math would say n⁰=1 for n≠0; these use a void override)
 
-Watch a live cinematic arena fight, or play **2 Player** local multiplayer. **Higher power wins. Equal powers draw. Power 0 loses to any positive. Two zeros draw. Never random.**
+Watch a **Learning Mode** cinematic arena fight, or play **2 Player** local multiplayer (keyboard or phone touch pads). **Higher power wins. Equal powers draw. Power 0 loses to any positive. Two zeros draw. Never random.**
 
 No video render server. No separate API. Just the site.
 
@@ -23,27 +23,36 @@ npm run dev
 
 Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
-## How to fight (cinematic)
+## Learning Mode (cinematic)
 
-1. **Home** → **Pick Fighters** (or open **Fight**)
+1. **Home** → **Learning Mode** (or open **Learning** in the nav / `/select`)
 2. Choose Fighter A and Fighter B (or **Randomize**)
 3. **Enter Arena**
 4. Watch the animated sequence; both fighters punch and fire unique abilities; the math on screen matches the winner
-5. **Pick New Fighters** or **Random Rematch**
+5. **Back to Learning Mode** or **Random Rematch**
 
 ## 2 Player (local versus)
 
 1. **Home** → **2 Player** (or open `/versus`)
-2. Player 1 and Player 2 each pick a **different** hero
-3. **Enter Versus** — click the arena to focus controls
+2. Player 1 (left) and Player 2 (right) each pick a **different** hero
+3. **Enter Versus** — click/tap the arena for keyboard focus; touch pads work immediately
 4. Fight until HP hits 0 or the 90s timer ends (higher HP wins; still tied → draw)
 
 ### Controls
 
 | | Move | Fly | Punch | Ability |
 |---|---|---|---|---|
-| **P1** | WASD | Space jump · double-tap Space to toggle fly (W/S while flying) | T | Y |
-| **P2** | Arrow keys | ↑ rise / ↓ drop (freeflight) | Enter | Shift |
+| **P1 (left)** | WASD | Space fly (jump / double-tap toggle; W/S while flying) | T | Y |
+| **P2 (right)** | Arrow keys | ↑ rise / ↓ drop (freeflight) | Enter | Shift |
+
+### Phone / touch
+
+On `/versus` arena, dual on-screen pads appear:
+
+- **P1** — left side: d-pad (move + fly), Punch, Ability
+- **P2** — right side: same layout mirrored
+
+Large tap targets, `touch-action: none`, scroll/zoom blocked while fighting. Keyboard still works on desktop.
 
 ### Damage rules (math-gated)
 
@@ -76,8 +85,8 @@ src/heroes/          # 66 heroes + procedural SVG art
 src/mathEngine/      # power math + Unicode / <sup> notation
 src/battleEngine/    # deterministic fight resolution
 src/animations/      # live arena fight sequence + ability / punch VFX
-src/versus/          # 2P damage rules + controllable arena
+src/versus/          # 2P damage rules + controllable arena + touch pads
 src/audio/           # MP3 BGM (from 0:35) + fight SFX
 public/audio/        # original-bg.mp3
-src/pages/           # Home, Gallery, Select, Arena, Versus
+src/pages/           # Home, Gallery, Learning Mode select, Arena, Versus
 ```

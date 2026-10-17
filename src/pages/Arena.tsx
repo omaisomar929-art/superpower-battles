@@ -19,9 +19,9 @@ export function Arena() {
   if (!fighterA || !fighterB || !result) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20 text-center">
-        <p className="text-slate-300">Select two fighters to enter the arena.</p>
+        <p className="text-slate-300">Select two fighters in Learning Mode to enter the arena.</p>
         <Link to="/select" className="btn-primary mt-6 inline-block">
-          FIGHTER SELECT
+          LEARNING MODE
         </Link>
       </div>
     )
@@ -34,7 +34,7 @@ export function Arena() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="font-display text-3xl tracking-widest text-sky-300">ARENA</h1>
+      <h1 className="font-display text-3xl tracking-widest text-sky-300">LEARNING MODE · ARENA</h1>
       <p className="mt-2 text-slate-400">
         Animated fight sequence. HP bars are presentation only — the math decides the winner.
       </p>
@@ -45,7 +45,7 @@ export function Arena() {
 
       <div className="mt-6 flex flex-wrap gap-3">
         <Link to="/select" className="btn-primary text-xs">
-          PICK NEW FIGHTERS
+          BACK TO LEARNING MODE
         </Link>
         <button type="button" className="btn-secondary text-xs" onClick={rematch}>
           RANDOM REMATCH

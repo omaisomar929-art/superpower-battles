@@ -105,7 +105,7 @@ export function Gallery() {
               </div>
             </dl>
             <Link to={`/select?a=${detail.id}`} className="btn-primary mt-6 inline-block">
-              FIGHT WITH {detail.name.toUpperCase()}
+              LEARNING MODE · {detail.name.toUpperCase()}
             </Link>
           </div>
         </div>

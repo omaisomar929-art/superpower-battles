@@ -71,10 +71,10 @@ export function FighterSelect() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="font-display text-3xl tracking-widest text-fuchsia-300">FIGHTER SELECT</h1>
+      <h1 className="font-display text-3xl tracking-widest text-fuchsia-300">LEARNING MODE</h1>
       <p className="mt-2 text-slate-400">
-        Pick two heroes. Higher power wins — math never lies. Power-zero void variants (n⁰) have game power
-        0.
+        Choose two heroes and watch the cinematic arena — higher power wins, math never lies. Power-zero void
+        variants (n⁰) have game power 0.
       </p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto_1fr] items-start">

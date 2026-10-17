@@ -117,3 +117,34 @@ button {
   font-size: 0.7rem;
   color: #e2e8f0;
 }
+
+/* 2P arena — block scroll/zoom while fighting */
+body.versus-fighting {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.versus-arena,
+.versus-play,
+.versus-touch-btn {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.versus-touch-btn:active {
+  transform: scale(0.94);
+  filter: brightness(1.15);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .versus-play {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .versus-touch-btn {
+    min-height: 2.5rem;
+  }
+}

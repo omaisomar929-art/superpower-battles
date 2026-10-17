@@ -90,8 +90,8 @@ export function Versus() {
 
   if (inArena && paramA && paramB) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div className="versus-play mx-auto max-w-5xl px-2 py-3 sm:px-4 sm:py-6">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3 sm:mb-4">
           <div>
             <h1 className="font-display text-2xl tracking-widest text-amber-300 sm:text-3xl">2 PLAYER</h1>
             <p className="mt-1 text-sm text-slate-400">Local versus · {VERSUS_RULES_COPY}</p>
@@ -117,12 +117,18 @@ export function Versus() {
     <div className="mx-auto max-w-7xl px-4 py-8">
       <h1 className="font-display text-3xl tracking-widest text-amber-300">2 PLAYER</h1>
       <p className="mt-2 max-w-2xl text-slate-400">
-        Player 1 and Player 2 each pick a different hero, then fight in a controllable arena. {VERSUS_RULES_COPY}
+        Player 1 (left) and Player 2 (right) each pick a different hero, then fight in a controllable arena.{' '}
+        {VERSUS_RULES_COPY}
       </p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto_1fr] items-start">
         <div className={`panel rounded-2xl p-4 ${picking === 'a' ? 'ring-2 ring-sky-400' : ''}`}>
-          <div className="text-xs tracking-widest text-sky-300">PLAYER 1</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs tracking-widest text-sky-300">PLAYER 1 · LEFT</div>
+            <span className="rounded bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-sky-200">
+              P1
+            </span>
+          </div>
           {fighterA ? (
             <HeroCard hero={fighterA} compact />
           ) : (
@@ -131,7 +137,16 @@ export function Versus() {
           <button type="button" className="btn-secondary mt-2 w-full text-xs" onClick={() => setPicking('a')}>
             Choose P1
           </button>
-          <p className="mt-2 text-[10px] text-slate-500">WASD · Space · T punch · Y ability</p>
+          <div className="mt-3 rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-300">P1 controls</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-sky-100/90">
+              <span className="font-semibold text-white">WASD</span> move ·{' '}
+              <span className="font-semibold text-white">Space</span> fly ·{' '}
+              <span className="font-semibold text-white">T</span> punch ·{' '}
+              <span className="font-semibold text-white">Y</span> ability
+            </p>
+            <p className="mt-1.5 text-[10px] text-sky-200/70">Phone: left virtual pad · Punch · Ability</p>
+          </div>
         </div>
 
         <div className="flex flex-col items-center gap-3 py-4">
@@ -154,12 +169,17 @@ export function Versus() {
             ENTER VERSUS
           </button>
           <Link to="/select" className="text-[10px] tracking-wide text-slate-500 hover:text-sky-300">
-            Or cinematic fight →
+            Or Learning Mode →
           </Link>
         </div>
 
         <div className={`panel rounded-2xl p-4 ${picking === 'b' ? 'ring-2 ring-rose-400' : ''}`}>
-          <div className="text-xs tracking-widest text-rose-300">PLAYER 2</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs tracking-widest text-rose-300">PLAYER 2 · RIGHT</div>
+            <span className="rounded bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-rose-200">
+              P2
+            </span>
+          </div>
           {fighterB ? (
             <HeroCard hero={fighterB} compact />
           ) : (
@@ -168,8 +188,32 @@ export function Versus() {
           <button type="button" className="btn-secondary mt-2 w-full text-xs" onClick={() => setPicking('b')}>
             Choose P2
           </button>
-          <p className="mt-2 text-[10px] text-slate-500">Arrows · Enter punch · Shift ability</p>
+          <div className="mt-3 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-300">P2 controls</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-rose-100/90">
+              <span className="font-semibold text-white">Arrows</span> move ·{' '}
+              <span className="font-semibold text-white">Enter</span> punch ·{' '}
+              <span className="font-semibold text-white">Shift</span> ability
+            </p>
+            <p className="mt-1.5 text-[10px] text-rose-200/70">Phone: right virtual pad · Punch · Ability</p>
+          </div>
         </div>
+      </div>
+
+      <div className="panel mt-6 rounded-2xl border border-amber-400/20 bg-amber-500/5 px-4 py-3 sm:hidden">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-300">Phone / touch</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
+          In the arena, each player gets an on-screen pad: <span className="text-sky-300">P1 left</span>,{' '}
+          <span className="text-rose-300">P2 right</span>. Use the d-pad to move and fly; tap Punch and Ability.
+          Keyboard still works on desktop.
+        </p>
+      </div>
+      <div className="panel mt-6 hidden rounded-2xl border border-amber-400/20 bg-amber-500/5 px-4 py-3 sm:block">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-300">Touch / phone</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
+          On phones, the arena shows dual virtual pads — P1 on the left, P2 on the right — with move/fly d-pads
+          plus Punch and Ability. Desktop keeps the keyboard scheme above.
+        </p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-3">
