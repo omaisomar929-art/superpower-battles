@@ -52,7 +52,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     const next = !isMuted()
     setMuted(next)
     setMutedState(next)
-    // Unmute is always a user gesture — start BGM from 30s reliably.
+    // Unmute is always a user gesture — start BGM from 35s reliably.
     if (!next) void startAmbient()
   }
 

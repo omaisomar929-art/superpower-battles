@@ -54,7 +54,7 @@ export function Layout() {
       </main>
       <footer className="border-t border-white/10 px-4 py-4 text-center text-xs text-slate-500">
         <p>Math decides the winner. Never random. {TOTAL_HERO_COUNT} original heroes · Made by Yazan Omais</p>
-        <p className="mt-1 text-[10px] text-slate-600">Original background music · starts at 0:30</p>
+        <p className="mt-1 text-[10px] text-slate-600">Original background music · starts at 0:35</p>
       </footer>
     </div>
   )

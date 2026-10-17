@@ -1,12 +1,12 @@
 /**
  * Site audio: original MP3 background music + Web Audio fight SFX.
- * BGM starts at 30s and loops from 30s → end (never plays the intro).
+ * BGM starts at 35s and loops from 35s → end (never plays the intro).
  */
 
 type FightCue = 'intro' | 'whoosh' | 'impact' | 'blast' | 'clash' | 'reveal' | 'draw'
 
 /** Skip the opening; every play and every loop begins here. */
-export const BGM_LOOP_START_SEC = 30
+export const BGM_LOOP_START_SEC = 35
 
 const BGM_SRC = '/audio/original-bg.mp3'
 const BGM_VOLUME = 0.55
@@ -187,7 +187,7 @@ export function playFightCue(cue: FightCue): void {
 }
 
 /**
- * Start (or resume) the original MP3 BGM from 30s.
+ * Start (or resume) the original MP3 BGM from 35s.
  * Respects mute; autoplay may require a prior user gesture.
  */
 export async function startAmbient(): Promise<void> {

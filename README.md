@@ -31,7 +31,7 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 4. Watch the animated sequence; the math on screen matches the winner
 5. **Pick New Fighters** or **Random Rematch**
 
-Use the speaker icon in the header to mute/unmute background music and fight SFX. Site-wide BGM is the original MP3 at `public/audio/original-bg.mp3`, starting at **0:30** and looping from 30s → end (the opening is never played). Fight cues remain Web Audio synthesis. Playback may wait for a first click/keypress when the browser blocks autoplay.
+Use the speaker icon in the header to mute/unmute background music and fight SFX. Site-wide BGM is the original MP3 at `public/audio/original-bg.mp3`, starting at **0:35** and looping from 35s → end (the opening is never played). Fight cues remain Web Audio synthesis. Playback may wait for a first click/keypress when the browser blocks autoplay.
 
 ## Stack
 
@@ -55,7 +55,7 @@ src/heroes/          # 66 heroes + procedural SVG art
 src/mathEngine/      # power math + Unicode / <sup> notation
 src/battleEngine/    # deterministic fight resolution
 src/animations/      # live arena fight sequence
-src/audio/           # MP3 BGM (from 0:30) + fight SFX
+src/audio/           # MP3 BGM (from 0:35) + fight SFX
 public/audio/        # original-bg.mp3
 src/pages/           # Home, Gallery, Select, Arena
 ```
