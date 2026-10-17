@@ -96,8 +96,8 @@ function PlayerPad({
       <div className="grid grid-cols-3 grid-rows-3 gap-1 sm:gap-1.5">
         <span />
         <DirBtn
-          label="▲"
-          ariaLabel={`${label} up / fly`}
+          label="FLY"
+          ariaLabel={`${label} fly`}
           accent={accent}
           onHold={(on) => onDirChange(side, { up: true }, on)}
         />
@@ -143,7 +143,7 @@ function DirBtn({
     <button
       type="button"
       aria-label={ariaLabel}
-      className="versus-touch-btn flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold sm:h-12 sm:w-12"
+      className={`versus-touch-btn flex h-10 w-10 items-center justify-center rounded-xl border font-bold sm:h-12 sm:w-12 ${label.length > 1 ? 'text-[9px] tracking-wide sm:text-[10px]' : 'text-sm'}`}
       style={{
         touchAction: 'none',
         borderColor: `${accent}77`,

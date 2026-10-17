@@ -129,24 +129,28 @@ export function Versus() {
               P1
             </span>
           </div>
+          <div className="mt-3 rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-300">P1 controls</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-sky-100/90">
+              <span className="font-semibold text-white">WASD</span> ·{' '}
+              <span className="font-semibold text-white">Space</span> fly ·{' '}
+              <span className="font-semibold text-white">T</span> punch ·{' '}
+              <span className="font-semibold text-white">Y</span> ability
+            </p>
+            <p className="mt-1.5 text-[10px] text-sky-200/70">
+              Phone: left pad · hold ▲ Fly · Punch · Ability
+            </p>
+          </div>
           {fighterA ? (
-            <HeroCard hero={fighterA} compact />
+            <div className="mt-3">
+              <HeroCard hero={fighterA} compact />
+            </div>
           ) : (
             <p className="py-10 text-center text-slate-500">Select Player 1</p>
           )}
           <button type="button" className="btn-secondary mt-2 w-full text-xs" onClick={() => setPicking('a')}>
             Choose P1
           </button>
-          <div className="mt-3 rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-300">P1 controls</p>
-            <p className="mt-1.5 text-xs leading-relaxed text-sky-100/90">
-              <span className="font-semibold text-white">WASD</span> move · hold{' '}
-              <span className="font-semibold text-white">W</span>/<span className="font-semibold text-white">Space</span>{' '}
-              ascend · <span className="font-semibold text-white">T</span> punch ·{' '}
-              <span className="font-semibold text-white">Y</span> ability
-            </p>
-            <p className="mt-1.5 text-[10px] text-sky-200/70">Phone: left virtual pad · Punch · Ability</p>
-          </div>
         </div>
 
         <div className="flex flex-col items-center gap-3 py-4">
@@ -180,24 +184,28 @@ export function Versus() {
               P2
             </span>
           </div>
+          <div className="mt-3 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-300">P2 controls</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-rose-100/90">
+              <span className="font-semibold text-white">Arrows</span> ·{' '}
+              <span className="font-semibold text-white">↑</span> fly ·{' '}
+              <span className="font-semibold text-white">Enter</span> punch ·{' '}
+              <span className="font-semibold text-white">Shift</span> ability
+            </p>
+            <p className="mt-1.5 text-[10px] text-rose-200/70">
+              Phone: right pad · hold ▲ Fly · Punch · Ability
+            </p>
+          </div>
           {fighterB ? (
-            <HeroCard hero={fighterB} compact />
+            <div className="mt-3">
+              <HeroCard hero={fighterB} compact />
+            </div>
           ) : (
             <p className="py-10 text-center text-slate-500">Select Player 2</p>
           )}
           <button type="button" className="btn-secondary mt-2 w-full text-xs" onClick={() => setPicking('b')}>
             Choose P2
           </button>
-          <div className="mt-3 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-300">P2 controls</p>
-            <p className="mt-1.5 text-xs leading-relaxed text-rose-100/90">
-              <span className="font-semibold text-white">Arrows</span> move · hold{' '}
-              <span className="font-semibold text-white">↑</span> ascend ·{' '}
-              <span className="font-semibold text-white">Enter</span> punch ·{' '}
-              <span className="font-semibold text-white">Shift</span> ability
-            </p>
-            <p className="mt-1.5 text-[10px] text-rose-200/70">Phone: right virtual pad · Punch · Ability</p>
-          </div>
         </div>
       </div>
 

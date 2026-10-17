@@ -418,20 +418,20 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
         {/* HUD */}
         <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-start gap-2 sm:mb-3 sm:items-center sm:gap-3">
           <div>
-            <HudBar hero={fighterA} hp={p1.hp} fx={fxA} align="left" label="P1 · LEFT" />
-            <p className="mt-1 hidden text-[10px] leading-snug text-sky-300/80 sm:block">
-              WASD · hold W/Space ascend · T punch · Y ability
+            <p className="mb-1 text-[10px] leading-snug text-sky-300/90">
+              WASD · Space fly · T punch · Y ability
             </p>
+            <HudBar hero={fighterA} hp={p1.hp} fx={fxA} align="left" label="P1 · LEFT" />
           </div>
           <div className="text-center">
             <div className="font-display text-xl text-amber-300 tabular-nums sm:text-2xl">{timeLeft}s</div>
             <div className="text-[10px] tracking-widest text-slate-500">VS</div>
           </div>
           <div>
-            <HudBar hero={fighterB} hp={p2.hp} fx={fxB} align="right" label="P2 · RIGHT" />
-            <p className="mt-1 hidden text-[10px] leading-snug text-rose-300/80 sm:block sm:text-right">
-              Arrows · Enter punch · Shift ability
+            <p className="mb-1 text-right text-[10px] leading-snug text-rose-300/90">
+              Arrows · ↑ fly · Enter punch · Shift ability
             </p>
+            <HudBar hero={fighterB} hp={p2.hp} fx={fxB} align="right" label="P2 · RIGHT" />
           </div>
         </div>
 
@@ -557,13 +557,12 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
             <span className="rounded bg-sky-500/25 px-2 py-0.5 text-[10px] font-semibold text-sky-100">P1</span>
           </div>
           <p className="mt-2 leading-relaxed">
-            <span className="font-semibold text-white">WASD</span> · hold{' '}
-            <span className="font-semibold text-white">W</span>/<span className="font-semibold text-white">Space</span>{' '}
-            ascend · <span className="font-semibold text-white">S</span> descend ·{' '}
+            <span className="font-semibold text-white">WASD</span> ·{' '}
+            <span className="font-semibold text-white">Space</span> fly ·{' '}
             <span className="font-semibold text-white">T</span> punch ·{' '}
             <span className="font-semibold text-white">Y</span> ability
           </p>
-          <p className="mt-1.5 text-[10px] text-sky-200/70">Touch: left d-pad (hold ▲ ascend) · Punch · Ability</p>
+          <p className="mt-1.5 text-[10px] text-sky-200/70">Touch: left d-pad · hold ▲ Fly · Punch · Ability</p>
         </div>
         <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-slate-200 sm:p-4">
           <div className="flex items-center justify-between gap-2">
@@ -571,13 +570,12 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
             <span className="rounded bg-rose-500/25 px-2 py-0.5 text-[10px] font-semibold text-rose-100">P2</span>
           </div>
           <p className="mt-2 leading-relaxed">
-            <span className="font-semibold text-white">Arrows</span> · hold{' '}
-            <span className="font-semibold text-white">↑</span> ascend ·{' '}
-            <span className="font-semibold text-white">↓</span> descend ·{' '}
+            <span className="font-semibold text-white">Arrows</span> ·{' '}
+            <span className="font-semibold text-white">↑</span> fly ·{' '}
             <span className="font-semibold text-white">Enter</span> punch ·{' '}
             <span className="font-semibold text-white">Shift</span> ability
           </p>
-          <p className="mt-1.5 text-[10px] text-rose-200/70">Touch: right d-pad (hold ▲ ascend) · Punch · Ability</p>
+          <p className="mt-1.5 text-[10px] text-rose-200/70">Touch: right d-pad · hold ▲ Fly · Punch · Ability</p>
         </div>
         <p className="text-[11px] text-slate-500 sm:col-span-2">{VERSUS_RULES_COPY}</p>
       </div>
