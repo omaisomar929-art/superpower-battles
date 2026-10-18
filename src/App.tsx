@@ -6,6 +6,7 @@ import { Gallery } from './pages/Gallery'
 import { FighterSelect } from './pages/FighterSelect'
 import { Arena } from './pages/Arena'
 import { Versus } from './pages/Versus'
+import { QuestionMode } from './pages/QuestionMode'
 
 export default function App() {
   return (
@@ -19,6 +20,8 @@ export default function App() {
             <Route path="select" element={<FighterSelect />} />
             <Route path="arena" element={<Arena />} />
             <Route path="versus" element={<Versus />} />
+            <Route path="question" element={<QuestionMode />} />
+            <Route path="quiz" element={<Navigate to="/question" replace />} />
             <Route path="multiplayer" element={<Navigate to="/versus" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

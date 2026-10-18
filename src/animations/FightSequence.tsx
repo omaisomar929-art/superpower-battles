@@ -18,6 +18,10 @@ interface FightSequenceProps {
   result: BattleResult
   arena: string
   autoStart?: boolean
+  /** Shorter phase timings for quiz / question feedback loops. */
+  compact?: boolean
+  /** Hide the built-in replay button (parent owns next-step CTAs). */
+  hideReplay?: boolean
   onComplete?: () => void
 }
 
@@ -30,7 +34,25 @@ const PHASE_MS: Record<Exclude<FightPhase, 'idle' | 'done'>, number> = {
   reveal: 2200,
 }
 
-export function FightSequence({ fighterA, fighterB, result, arena, autoStart = true, onComplete }: FightSequenceProps) {
+const COMPACT_PHASE_MS: Record<Exclude<FightPhase, 'idle' | 'done'>, number> = {
+  introA: 550,
+  introB: 550,
+  battle: 1200,
+  compare: 900,
+  clash: 1100,
+  reveal: 1400,
+}
+
+export function FightSequence({
+  fighterA,
+  fighterB,
+  result,
+  arena,
+  autoStart = true,
+  compact = false,
+  hideReplay = false,
+  onComplete,
+}: FightSequenceProps) {
   const [phase, setPhase] = useState<FightPhase>(autoStart ? 'introA' : 'idle')
   const [hpA, setHpA] = useState(100)
   const [hpB, setHpB] = useState(100)
@@ -41,15 +63,16 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
 
   useEffect(() => {
     if (phase === 'idle' || phase === 'done') return
+    const ms = (compact ? COMPACT_PHASE_MS : PHASE_MS)[phase as keyof typeof PHASE_MS] ?? 1000
     const timer = window.setTimeout(() => {
       const order: FightPhase[] = ['introA', 'introB', 'battle', 'compare', 'clash', 'reveal', 'done']
       const idx = order.indexOf(phase)
       const next = order[idx + 1] ?? 'done'
       setPhase(next)
       if (next === 'done') onComplete?.()
-    }, PHASE_MS[phase as keyof typeof PHASE_MS] ?? 1000)
+    }, ms)
     return () => window.clearTimeout(timer)
-  }, [phase, onComplete])
+  }, [phase, onComplete, compact])
 
   useEffect(() => {
     if (phase === 'introA') {
@@ -349,7 +372,7 @@ export function FightSequence({ fighterA, fighterB, result, arena, autoStart = t
           )}
         </AnimatePresence>
 
-        {(phase === 'done' || phase === 'idle') && (
+        {!hideReplay && (phase === 'done' || phase === 'idle') && (
           <div className="mt-6 flex justify-center gap-3">
             <button type="button" className="btn-secondary text-xs" onClick={replay}>
               REPLAY

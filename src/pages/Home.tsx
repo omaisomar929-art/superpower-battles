@@ -90,9 +90,12 @@ export function Home() {
           variants (0⁰–10⁰). Higher power wins. Always.
         </p>
 
-        <div className="mt-10 flex flex-col sm:flex-row gap-3">
+        <div className="mt-10 flex flex-col sm:flex-row flex-wrap justify-center gap-3">
           <Link to="/select" className="btn-primary">
             LEARNING MODE
+          </Link>
+          <Link to="/question" className="btn-primary">
+            QUESTION MODE
           </Link>
           <Link to="/versus" className="btn-secondary">
             2 PLAYER
