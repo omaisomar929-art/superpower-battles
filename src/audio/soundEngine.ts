@@ -1,7 +1,12 @@
 /**
  * Site audio: original MP3 background music + Web Audio fight SFX.
  * BGM starts at 35s and loops from 35s → end (never plays the intro).
+ * Victory stingers are procedural (Web Audio) — never copyrighted clips.
  */
+
+import type { Hero } from '../heroes/types'
+import { getAbilityFx, type AbilityFamily } from '../animations/abilityFx'
+import { powerToIntensity } from '../animations/victoryDance'
 
 export type FightCue =
   | 'intro'
@@ -38,6 +43,9 @@ let ambientDesired = true
 let loopHandlerAttached = false
 /** True while playing muted only to bypass autoplay policy; awaiting first gesture to unmute. */
 let awaitingGestureUnmute = false
+/** Active victory-stinger duck restore timer. */
+let bgmDuckTimer: ReturnType<typeof setTimeout> | null = null
+let bgmPreDuckVolume = 0.55
 
 function getCtx(): AudioContext {
   if (!sharedCtx) {
@@ -396,4 +404,251 @@ export async function ensureAudioUnlocked(): Promise<void> {
   // Already playing with sound — do not restart from 35s on incidental gestures.
   if (!audio.paused && !audio.muted) return
   await startAmbient()
+}
+
+/* ─── Victory stinger (procedural, per-hero) ─────────────────────────── */
+
+type ScaleMode = 'major' | 'minor' | 'pentatonic' | 'whole' | 'chromatic-dark'
+
+interface VictoryStingerProfile {
+  bpm: number
+  rootHz: number
+  mode: ScaleMode
+  oscType: OscillatorType
+  noteCount: number
+  durationSec: number
+  brightness: number
+  family: AbilityFamily
+}
+
+const MAJOR = [0, 4, 7, 12, 16, 19, 24]
+const MINOR = [0, 3, 7, 12, 15, 19, 24]
+const PENTA = [0, 3, 5, 7, 10, 12, 15]
+const WHOLE = [0, 2, 4, 6, 8, 10, 12]
+const DARK = [0, 1, 3, 6, 7, 8, 11, 12]
+
+const SCALES: Record<ScaleMode, number[]> = {
+  major: MAJOR,
+  minor: MINOR,
+  pentatonic: PENTA,
+  whole: WHOLE,
+  'chromatic-dark': DARK,
+}
+
+function parseHex(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace('#', '').trim()
+  if (h.length === 3) {
+    return {
+      r: parseInt(h[0]! + h[0]!, 16),
+      g: parseInt(h[1]! + h[1]!, 16),
+      b: parseInt(h[2]! + h[2]!, 16),
+    }
+  }
+  if (h.length >= 6) {
+    return {
+      r: parseInt(h.slice(0, 2), 16) || 0,
+      g: parseInt(h.slice(2, 4), 16) || 0,
+      b: parseInt(h.slice(4, 6), 16) || 0,
+    }
+  }
+  return { r: 80, g: 120, b: 200 }
+}
+
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const rn = r / 255
+  const gn = g / 255
+  const bn = b / 255
+  const max = Math.max(rn, gn, bn)
+  const min = Math.min(rn, gn, bn)
+  const l = (max + min) / 2
+  if (max === min) return { h: 0, s: 0, l }
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  let h = 0
+  if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6
+  else if (max === gn) h = ((bn - rn) / d + 2) / 6
+  else h = ((rn - gn) / d + 4) / 6
+  return { h: h * 360, s, l }
+}
+
+function familyTimbre(family: AbilityFamily): {
+  osc: OscillatorType
+  mode: ScaleMode
+  rootBias: number
+  bell: boolean
+  drone: boolean
+} {
+  switch (family) {
+    case 'void':
+      return { osc: 'sine', mode: 'chromatic-dark', rootBias: 55, bell: false, drone: true }
+    case 'fire':
+      return { osc: 'sawtooth', mode: 'major', rootBias: 196, bell: false, drone: false }
+    case 'ice':
+      return { osc: 'triangle', mode: 'pentatonic', rootBias: 392, bell: true, drone: false }
+    case 'lightning':
+      return { osc: 'square', mode: 'whole', rootBias: 330, bell: false, drone: false }
+    case 'cosmic':
+      return { osc: 'sine', mode: 'major', rootBias: 262, bell: true, drone: true }
+    case 'shadow':
+      return { osc: 'triangle', mode: 'minor', rootBias: 98, bell: false, drone: true }
+    case 'earth':
+      return { osc: 'square', mode: 'minor', rootBias: 82, bell: false, drone: false }
+    case 'wind':
+      return { osc: 'sine', mode: 'pentatonic', rootBias: 294, bell: false, drone: false }
+    case 'plasma':
+      return { osc: 'sawtooth', mode: 'whole', rootBias: 220, bell: false, drone: false }
+    case 'crystal':
+      return { osc: 'triangle', mode: 'major', rootBias: 440, bell: true, drone: false }
+    default:
+      return { osc: 'triangle', mode: 'major', rootBias: 220, bell: false, drone: false }
+  }
+}
+
+function hashStr(id: string): number {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i += 1) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+/** Build a unique victory jingle profile from hero power + colors + ability family. */
+export function getVictoryStingerProfile(hero: Hero): VictoryStingerProfile {
+  const fx = getAbilityFx(hero)
+  const timbre = familyTimbre(fx.family)
+  const intensity = powerToIntensity(hero.power)
+  const main = rgbToHsl(parseHex(hero.mainColor).r, parseHex(hero.mainColor).g, parseHex(hero.mainColor).b)
+  const sec = rgbToHsl(
+    parseHex(hero.secondaryColor).r,
+    parseHex(hero.secondaryColor).g,
+    parseHex(hero.secondaryColor).b,
+  )
+  const seed = hashStr(hero.id)
+
+  // Warm hues → faster; cool/dark → slower. Power pushes tempo up.
+  const hueTempo = 88 + (main.h / 360) * 70 + main.l * 40
+  const bpm = Math.round(Math.min(168, Math.max(72, hueTempo + intensity * 28 + (seed % 18) - 9)))
+
+  // Color lightness + hue nudge root; family sets base register.
+  const rootHz = timbre.rootBias * (0.85 + main.l * 0.35 + ((seed % 12) / 100)) * (0.95 + sec.s * 0.12)
+
+  const noteCount = Math.min(12, Math.round(4 + intensity * 3.5 + (seed % 3)))
+  const durationSec = Math.min(3.6, 1.15 + intensity * 0.95 + (seed % 5) * 0.08)
+
+  // Dark / low-sat colors prefer minor / dark modes unless family forces otherwise.
+  let mode = timbre.mode
+  if (main.l < 0.28 && mode === 'major') mode = 'minor'
+  if (main.s < 0.2 && fx.family === 'void') mode = 'chromatic-dark'
+
+  return {
+    bpm,
+    rootHz,
+    mode,
+    oscType: timbre.osc,
+    noteCount,
+    durationSec,
+    brightness: Math.min(1, 0.35 + main.l * 0.5 + intensity * 0.2),
+    family: fx.family,
+  }
+}
+
+function duckBgm(durationSec: number): void {
+  const audio = bgAudio
+  if (!audio || muted) return
+  if (bgmDuckTimer) {
+    clearTimeout(bgmDuckTimer)
+    bgmDuckTimer = null
+  }
+  bgmPreDuckVolume = audio.volume > 0.05 ? audio.volume : BGM_VOLUME
+  audio.volume = Math.max(0.08, bgmPreDuckVolume * 0.22)
+  bgmDuckTimer = setTimeout(() => {
+    bgmDuckTimer = null
+    if (!bgAudio || muted) return
+    bgAudio.volume = ambientDesired ? BGM_VOLUME : bgmPreDuckVolume
+  }, Math.ceil(durationSec * 1000) + 120)
+}
+
+function midiOffsetToHz(rootHz: number, semitones: number): number {
+  return rootHz * Math.pow(2, semitones / 12)
+}
+
+function playBellPartial(freq: number, when: number, gainLevel: number, dur: number): void {
+  tone(freq, dur, 'sine', gainLevel, when)
+  tone(freq * 2.01, dur * 0.7, 'triangle', gainLevel * 0.35, when + 0.01)
+  tone(freq * 3.01, dur * 0.4, 'sine', gainLevel * 0.18, when + 0.02)
+}
+
+function playDrone(freq: number, when: number, gainLevel: number, dur: number): void {
+  tone(freq, dur, 'sine', gainLevel, when, freq * 2.5)
+  tone(freq * 1.5, dur * 0.9, 'triangle', gainLevel * 0.4, when + 0.05, freq * 3)
+}
+
+/**
+ * Play an original procedural victory stinger unique to this hero.
+ * Ducks BGM briefly, then restores. No-ops when muted.
+ */
+export function playVictoryStinger(hero: Hero): void {
+  if (muted) return
+  const profile = getVictoryStingerProfile(hero)
+  const timbre = familyTimbre(profile.family)
+  const t0 = now()
+  const ctx = getCtx()
+  if (ctx.state === 'suspended') void ctx.resume()
+
+  duckBgm(profile.durationSec)
+
+  const beat = 60 / profile.bpm
+  const scale = SCALES[profile.mode]
+  const seed = hashStr(hero.id)
+
+  // Opening hit — family flavor
+  if (timbre.drone) {
+    playDrone(profile.rootHz * 0.5, t0, 0.05 + profile.brightness * 0.03, profile.durationSec * 0.85)
+  }
+  if (timbre.bell) {
+    playBellPartial(profile.rootHz * 2, t0, 0.045 + profile.brightness * 0.025, 0.55)
+  } else {
+    noiseBurst(0.12, 0.06 + profile.brightness * 0.03, t0, profile.family === 'lightning' ? 1800 : 400)
+  }
+
+  // Melodic fanfare notes
+  for (let i = 0; i < profile.noteCount; i += 1) {
+    const deg = scale[(seed + i * 3) % scale.length]!
+    const octave = i > profile.noteCount * 0.55 ? 12 : 0
+    const freq = midiOffsetToHz(profile.rootHz, deg + octave)
+    const when = t0 + 0.08 + i * beat * (0.45 + ((seed >> (i % 8)) & 1) * 0.12)
+    const dur = beat * (0.55 + (i % 3) * 0.15) + (i === profile.noteCount - 1 ? 0.35 : 0)
+    const gain =
+      (0.028 + profile.brightness * 0.028) * (i === profile.noteCount - 1 ? 1.25 : 1) *
+      (profile.oscType === 'sawtooth' || profile.oscType === 'square' ? 0.75 : 1)
+
+    if (timbre.bell && i % 2 === 0) {
+      playBellPartial(freq, when, gain, dur)
+    } else {
+      const filter =
+        profile.family === 'void'
+          ? 280
+          : profile.family === 'fire'
+            ? 2200
+            : 900 + profile.brightness * 1600
+      tone(freq, dur, profile.oscType, gain, when, filter)
+    }
+
+    // Harmony on even beats for richer high-power fanfares
+    if (profile.noteCount >= 7 && i % 2 === 0) {
+      const harm = midiOffsetToHz(profile.rootHz, deg + 7)
+      tone(harm, dur * 0.85, 'sine', gain * 0.45, when + 0.01, 1800)
+    }
+  }
+
+  // Closing resolve chord
+  const resolveAt = t0 + profile.durationSec * 0.72
+  const resolveGain = 0.035 + profile.brightness * 0.025
+  tone(profile.rootHz, 0.55, 'sine', resolveGain, resolveAt)
+  tone(midiOffsetToHz(profile.rootHz, profile.mode === 'minor' || profile.mode === 'chromatic-dark' ? 3 : 4), 0.5, 'triangle', resolveGain * 0.7, resolveAt + 0.02)
+  tone(midiOffsetToHz(profile.rootHz, 7), 0.6, 'sine', resolveGain * 0.55, resolveAt + 0.04)
+  if (profile.noteCount >= 8) {
+    tone(midiOffsetToHz(profile.rootHz, 12), 0.45, 'triangle', resolveGain * 0.4, resolveAt + 0.06)
+  }
 }

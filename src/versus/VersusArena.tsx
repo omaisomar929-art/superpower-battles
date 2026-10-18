@@ -4,7 +4,8 @@ import type { Hero } from '../heroes/types'
 import { HeroArt } from '../heroes/HeroArt'
 import { MathExpression } from '../components/MathExpression'
 import { getAbilityFx } from '../animations/abilityFx'
-import { playFightCue } from '../audio/soundEngine'
+import { VictoryDance } from '../animations/VictoryDance'
+import { playFightCue, playVictoryStinger } from '../audio/soundEngine'
 import {
   MATCH_SECONDS,
   MAX_HP,
@@ -253,7 +254,7 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
       if (def.hp <= 0) {
         outcomeRef.current = attacker
         setOutcome(attacker)
-        playFightCue('reveal')
+        playVictoryStinger(attacker === 'p1' ? fighterA : fighterB)
       }
     },
     [fighterA, fighterB, fxA, fxB, spawnFx],
@@ -347,7 +348,8 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
           const out: Outcome = a > b ? 'p1' : b > a ? 'p2' : 'draw'
           outcomeRef.current = out
           setOutcome(out)
-          playFightCue(out === 'draw' ? 'draw' : 'reveal')
+          if (out === 'draw') playFightCue('draw')
+          else playVictoryStinger(out === 'p1' ? fighterA : fighterB)
         }
       }
 
@@ -535,20 +537,29 @@ export function VersusArena({ fighterA, fighterB, arena = 'neon-colosseum', onEx
               <AnimatePresence>
                 {outcome && (
                   <motion.div
-                    className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/75 px-4 text-center"
+                    className="absolute inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto bg-black/75 px-3 py-4 text-center sm:px-4"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
-                    <div className="font-display text-2xl text-amber-300 sm:text-3xl md:text-4xl">
+                    <div className="font-display text-xl text-amber-300 sm:text-3xl md:text-4xl">
                       {outcome === 'draw' ? 'SPECTACULAR DRAW' : `WINNER: ${winnerLabel}`}
                     </div>
-                    <p className="mt-2 max-w-md text-sm text-slate-300">
+                    {outcome !== 'draw' && (
+                      <div className="mt-3 flex justify-center sm:mt-4">
+                        <VictoryDance
+                          hero={outcome === 'p1' ? fighterA : fighterB}
+                          size={110}
+                          compact
+                        />
+                      </div>
+                    )}
+                    <p className="mt-2 max-w-md text-xs text-slate-300 sm:text-sm">
                       {fighterA.expression}={fighterA.power} vs {fighterB.expression}={fighterB.power}
                       {outcome === 'draw'
                         ? ' — equal remaining HP (or both zero).'
                         : ` — ${VERSUS_RULES_COPY}`}
                     </p>
-                    <div className="mt-6 flex flex-wrap justify-center gap-3">
+                    <div className="mt-4 flex flex-wrap justify-center gap-3 sm:mt-6">
                       <button type="button" className="btn-primary text-xs" onClick={onRematch ?? resetMatch}>
                         REMATCH
                       </button>

@@ -4,10 +4,12 @@ import type { BattleResult } from '../battleEngine'
 import type { Hero } from '../heroes/types'
 import { HeroArt } from '../heroes/HeroArt'
 import { MathExpression } from '../components/MathExpression'
-import { playFightCue } from '../audio/soundEngine'
+import { playFightCue, playVictoryStinger } from '../audio/soundEngine'
 import { getAbilityFx } from './abilityFx'
 import { AbilityVfx, ArenaCombatParticles } from './AbilityVfx'
 import { DualPunchVfx } from './DualPunchVfx'
+import { VictoryDance } from './VictoryDance'
+import { getVictoryDance } from './victoryDance'
 import type { FightPhase } from './fightPhases'
 
 export type { FightPhase } from './fightPhases'
@@ -117,9 +119,17 @@ export function FightSequence({
       }, 240)
       return () => window.clearInterval(id)
     }
-    if (phase === 'reveal') playFightCue(result.winner === 'draw' ? 'draw' : 'reveal')
+    if (phase === 'reveal') {
+      if (result.winner === 'draw') {
+        playFightCue('draw')
+      } else if (result.winnerHero) {
+        playVictoryStinger(result.winnerHero)
+      } else {
+        playFightCue('reveal')
+      }
+    }
     return undefined
-  }, [phase, result.winner, fxA.cue, fxB.cue])
+  }, [phase, result.winner, result.winnerHero, fxA.cue, fxB.cue])
 
   useEffect(() => {
     if (phase !== 'battle' && phase !== 'clash') return
@@ -359,6 +369,11 @@ export function FightSequence({
               ) : (
                 <>
                   <div className="font-display text-2xl text-amber-300">WINNER: {result.winnerHero?.name}</div>
+                  {result.winnerHero && (
+                    <div className="mx-auto mt-4 flex justify-center">
+                      <VictoryDance hero={result.winnerHero} size={120} compact />
+                    </div>
+                  )}
                   <p className="mt-2 text-slate-300">{result.explanation}</p>
                   <p className="mt-2 text-xs text-slate-500 italic">{result.winnerHero?.victoryAnimation}</p>
                   {result.winnerHero && (
@@ -441,13 +456,34 @@ function FighterPanel({
     animate = { x: side === 'left' ? [0, 8, -4, 0] : [0, -8, 4, 0] }
   }
 
+  // Winner reveal: seed-stable victory bounce/spin on the victorious panel
+  const isVictoryPose = highlight && (phase === 'reveal' || phase === 'done')
+  const victoryDance = isVictoryPose ? getVictoryDance(hero) : null
+  if (victoryDance) {
+    const y = victoryDance.bouncePx * 0.7
+    animate = {
+      y: [0, -y, 0, -y * 0.5, 0],
+      scale: [1, 1 + victoryDance.intensity * 0.12, 1, 1.06, 1],
+      rotate:
+        victoryDance.style === 'spin' || victoryDance.style === 'swirl'
+          ? [0, victoryDance.spinDeg * 0.25, -victoryDance.spinDeg * 0.1, 0]
+          : [0, -8, 6, -4, 0],
+    }
+  }
+
   return (
     <motion.div
       className={`relative text-center ${dim ? 'opacity-40 grayscale' : ''} ${highlight ? 'drop-shadow-[0_0_20px_rgba(56,189,248,0.6)]' : ''}`}
       animate={animate}
       transition={{
-        repeat: phase === 'battle' || phase === 'clash' ? Infinity : 0,
-        duration: phase === 'battle' ? 0.42 : phase === 'clash' ? 0.3 : 0.55,
+        repeat: phase === 'battle' || phase === 'clash' || isVictoryPose ? Infinity : 0,
+        duration: victoryDance
+          ? victoryDance.duration
+          : phase === 'battle'
+            ? 0.42
+            : phase === 'clash'
+              ? 0.3
+              : 0.55,
         ease: 'easeInOut',
       }}
     >
