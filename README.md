@@ -10,7 +10,7 @@ Pick two of **66 original heroes**:
 - **5 null-base** voids — `0¹`–`0⁵` (power **0**)
 - **11 power-zero void variants** — `0⁰`–`10⁰` with **game power 0** (math would say n⁰=1 for n≠0; these use a void override)
 
-Watch a **Learning Mode** cinematic arena fight, play **Question Mode** (quiz → clash), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Higher power wins. Equal powers draw. Power 0 loses to any positive. Two zeros draw. Never random.**
+Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), play **Question Mode** (quiz → clash), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode** grades with *true* math (n⁰ = 1). Equal true powers → Equal / Draw. Never random.
 
 No video render server. No separate API. Just the site.
 
@@ -31,13 +31,21 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 4. Watch the animated sequence; both fighters punch and fire unique abilities; the math on screen matches the winner
 5. **Back to Learning Mode** or **Random Rematch**
 
+### Expand Mode (nested under Learning)
+
+1. From Learning Mode → **EXPAND MODE**, or open `/learning/expand` (also `/expand`)
+2. Enter or pick a non-negative integer
+3. See place-value expanded form with Unicode superscripts, e.g. `540 = 5×10² + 4×10¹`
+4. Conventions: `0` → `0`; skip zero digits (`100 = 1×10²`); ones place as `×10⁰` (`7 = 7×10⁰`)
+
 ## Question Mode (quiz → clash)
 
 1. **Home** → **Question Mode** (or **Question** in the nav / `/question`; `/quiz` redirects)
 2. Pick a champion (or randomize)
 3. Answer rotating question types: **compare powers**, **identify expression**, **who wins**
-4. Correct answers charge your side; misses charge the rival — then a short `FightSequence` proves the math
-5. Track score, streak, and grade; **Next Question** or **New Champion**
+4. Comparisons use **true math** (`n⁰ = 1`), so `5⁰` vs `1⁵` is Equal / Draw — not “void is weaker.” Combat void override (game power 0) still applies in Versus / Learning arena only.
+5. Correct answers charge your side; misses charge the rival — then a short `FightSequence` proves the math
+6. Track score, streak, and grade; **Next Question** or **New Champion**
 
 ## 2 Player (local versus)
 

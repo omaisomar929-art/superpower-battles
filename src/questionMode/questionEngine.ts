@@ -1,7 +1,7 @@
 import type { Hero } from '../heroes/types'
 import { HEROES, getRandomHeroes } from '../heroes/data'
-import { resolveBattle, type BattleOutcome, type BattleResult } from '../battleEngine'
-import { formatExpression } from '../mathEngine'
+import { resolveTrueBattle, type BattleOutcome, type BattleResult } from '../battleEngine'
+import { calculateTruePower, formatExpression } from '../mathEngine'
 
 export type QuestionType = 'compare' | 'identify' | 'predict'
 
@@ -23,7 +23,7 @@ export interface Question {
   /** Heroes that clash after the answer (left vs right). */
   clashA: Hero
   clashB: Hero
-  /** Precomputed math outcome for the clash. */
+  /** Precomputed math outcome for the clash (true mathematical powers). */
   battle: BattleResult
   /** Short teaching line revealed after answer. */
   teach: string
@@ -96,14 +96,49 @@ function shuffle<T>(items: T[]): T[] {
   return copy
 }
 
-function pickDistinctPair(preferDifferentPower = true): [Hero, Hero] {
+function truePowerOf(hero: Hero): number {
+  return calculateTruePower(hero.base, hero.exponent)
+}
+
+/** Pick two heroes; optionally prefer different or equal true mathematical powers. */
+function pickDistinctPair(mode: 'any' | 'different' | 'equal' = 'different'): [Hero, Hero] {
+  if (mode === 'equal') {
+    const equal = pickEqualTruePowerPair()
+    if (equal) return equal
+  }
+
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const [a, b] = getRandomHeroes(2)
     if (!a || !b) break
-    if (!preferDifferentPower || a.power !== b.power) return [a, b]
+    if (mode === 'any') return [a, b]
+    const same = truePowerOf(a) === truePowerOf(b)
+    if (mode === 'different' && !same) return [a, b]
+    if (mode === 'equal' && same) return [a, b]
   }
+
+  if (mode === 'equal') {
+    const fallback = pickEqualTruePowerPair()
+    if (fallback) return fallback
+  }
+
   const pool = shuffle(HEROES)
-  return [pool[0], pool[1]]
+  return [pool[0]!, pool[1]!]
+}
+
+/** Find two different expressions that share the same true mathematical value. */
+export function pickEqualTruePowerPair(): [Hero, Hero] | null {
+  const byPower = new Map<number, Hero[]>()
+  for (const hero of HEROES) {
+    const p = truePowerOf(hero)
+    const list = byPower.get(p) ?? []
+    list.push(hero)
+    byPower.set(p, list)
+  }
+  const candidates = [...byPower.values()].filter((group) => group.length >= 2)
+  if (candidates.length === 0) return null
+  const group = shuffle(candidates)[0]!
+  const picked = shuffle(group)
+  return [picked[0]!, picked[1]!]
 }
 
 function decoyExpressions(hero: Hero, count: number): string[] {
@@ -125,9 +160,14 @@ function outcomeLabel(winner: BattleOutcome, a: Hero, b: Hero): string {
   return b.name
 }
 
-export function generateCompareQuestion(): Question {
-  const [left, right] = pickDistinctPair(true)
-  const battle = resolveBattle(left, right)
+/**
+ * Compare uses true math (n⁰ = 1). Includes an Equal option so void-vs-unit
+ * pairs like 5⁰ vs 1⁵ grade as equal — not “void is weaker.”
+ */
+export function generateCompareQuestion(forceEqual = false): Question {
+  const wantEqual = forceEqual || Math.random() < 0.28
+  const [left, right] = pickDistinctPair(wantEqual ? 'equal' : 'different')
+  const battle = resolveTrueBattle(left, right)
   const leftOpt: QuestionOption = {
     id: 'left',
     label: left.expression,
@@ -138,15 +178,23 @@ export function generateCompareQuestion(): Question {
     label: right.expression,
     heroId: right.id,
   }
-  const options = shuffle([leftOpt, rightOpt])
+  const equalOpt: QuestionOption = {
+    id: 'equal',
+    label: 'Equal',
+  }
+  const options = shuffle([leftOpt, rightOpt, equalOpt])
   const correctOptionIds =
-    battle.winner === 'draw' ? [leftOpt.id, rightOpt.id] : battle.winner === 'a' ? [leftOpt.id] : [rightOpt.id]
+    battle.winner === 'draw'
+      ? ['equal']
+      : battle.winner === 'a'
+        ? [leftOpt.id]
+        : [rightOpt.id]
 
   return {
     id: `compare-${left.id}-${right.id}-${Date.now()}`,
     type: 'compare',
     prompt: 'Which power is stronger?',
-    hint: 'Math decides. Higher value wins the clash.',
+    hint: 'Use real math: n⁰ = 1. Equal values → pick Equal.',
     options,
     correctOptionIds,
     clashA: left,
@@ -160,7 +208,7 @@ export function generateIdentifyQuestion(champion: Hero): Question {
   const subjectPool = shuffle(HEROES.filter((h) => h.id !== champion.id))
   const subject = subjectPool[0] ?? champion
   const rival = subjectPool[1] ?? getRandomHeroes(1, [subject.id])[0]!
-  const battle = resolveBattle(champion, rival)
+  const battle = resolveTrueBattle(champion, rival)
 
   const correct: QuestionOption = {
     id: 'correct',
@@ -183,13 +231,14 @@ export function generateIdentifyQuestion(champion: Hero): Question {
     clashA: champion,
     clashB: rival,
     battle,
-    teach: `${subject.name} is ${formatExpression(subject.base, subject.exponent)} = ${subject.power.toLocaleString('en-US')}.`,
+    teach: `${subject.name} is ${formatExpression(subject.base, subject.exponent)} = ${truePowerOf(subject).toLocaleString('en-US')} (true math).`,
   }
 }
 
-export function generatePredictQuestion(): Question {
-  const [left, right] = pickDistinctPair(false)
-  const battle = resolveBattle(left, right)
+export function generatePredictQuestion(forceEqual = false): Question {
+  const wantEqual = forceEqual || Math.random() < 0.22
+  const [left, right] = pickDistinctPair(wantEqual ? 'equal' : 'any')
+  const battle = resolveTrueBattle(left, right)
   const options: QuestionOption[] = shuffle([
     { id: 'a', label: left.name, heroId: left.id },
     { id: 'b', label: right.name, heroId: right.id },
@@ -201,7 +250,7 @@ export function generatePredictQuestion(): Question {
     id: `predict-${left.id}-${right.id}-${Date.now()}`,
     type: 'predict',
     prompt: 'Who wins this matchup?',
-    hint: 'Predict from power before the clash reveals the truth.',
+    hint: 'Predict from true math (n⁰ = 1) before the clash reveals the truth.',
     options,
     correctOptionIds: [correctId],
     clashA: left,

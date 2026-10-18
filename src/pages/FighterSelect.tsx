@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { HEROES, getHeroById, getRandomHeroes } from '../heroes/data'
 import type { Hero } from '../heroes/types'
 import { HeroCard } from '../components/HeroCard'
@@ -71,11 +71,21 @@ export function FighterSelect() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="font-display text-3xl tracking-widest text-fuchsia-300">LEARNING MODE</h1>
-      <p className="mt-2 text-slate-400">
-        Choose two heroes and watch the cinematic arena — higher power wins, math never lies. Power-zero void
-        variants (n⁰) have game power 0.
-      </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl tracking-widest text-fuchsia-300">LEARNING MODE</h1>
+          <p className="mt-2 max-w-2xl text-slate-400">
+            Choose two heroes and watch the cinematic arena — higher power wins, math never lies. Power-zero void
+            variants (n⁰) have game power 0.
+          </p>
+        </div>
+        <Link
+          to="/learning/expand"
+          className="btn-secondary inline-flex shrink-0 items-center justify-center text-xs tracking-[0.2em]"
+        >
+          EXPAND MODE
+        </Link>
+      </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto_1fr] items-start">
         <div className={`panel rounded-2xl p-4 ${picking === 'a' ? 'ring-2 ring-sky-400' : ''}`}>

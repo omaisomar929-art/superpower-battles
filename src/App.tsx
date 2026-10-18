@@ -7,6 +7,7 @@ import { FighterSelect } from './pages/FighterSelect'
 import { Arena } from './pages/Arena'
 import { Versus } from './pages/Versus'
 import { QuestionMode } from './pages/QuestionMode'
+import { ExpandMode } from './pages/ExpandMode'
 
 export default function App() {
   return (
@@ -18,6 +19,8 @@ export default function App() {
             <Route path="gallery" element={<Gallery />} />
             <Route path="gallery/:id" element={<Gallery />} />
             <Route path="select" element={<FighterSelect />} />
+            <Route path="expand" element={<ExpandMode />} />
+            <Route path="learning/expand" element={<ExpandMode />} />
             <Route path="arena" element={<Arena />} />
             <Route path="versus" element={<Versus />} />
             <Route path="question" element={<QuestionMode />} />

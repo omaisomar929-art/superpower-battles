@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HEROES } from '../heroes/data'
-import { resolveBattle } from '../battleEngine'
+import { resolveTrueBattle } from '../battleEngine'
+import { calculatePower, calculateTruePower } from '../mathEngine'
 import {
   applyAnswer,
   createRun,
@@ -9,6 +10,7 @@ import {
   generatePredictQuestion,
   generateQuestion,
   gradeLabel,
+  pickEqualTruePowerPair,
 } from './questionEngine'
 
 describe('questionEngine', () => {
@@ -21,19 +23,49 @@ describe('questionEngine', () => {
     expect(run.round).toBe(1)
   })
 
-  it('compare questions mark the stronger expression correct', () => {
+  it('compare questions mark the stronger expression correct (true math)', () => {
     const q = generateCompareQuestion()
     expect(q.type).toBe('compare')
-    expect(q.options).toHaveLength(2)
-    const battle = resolveBattle(q.clashA, q.clashB)
+    expect(q.options).toHaveLength(3)
+    expect(q.options.some((o) => o.id === 'equal')).toBe(true)
+    const battle = resolveTrueBattle(q.clashA, q.clashB)
     expect(q.battle.winner).toBe(battle.winner)
     if (battle.winner === 'a') {
       expect(q.correctOptionIds).toEqual(['left'])
     } else if (battle.winner === 'b') {
       expect(q.correctOptionIds).toEqual(['right'])
     } else {
-      expect(q.correctOptionIds).toEqual(['left', 'right'])
+      expect(q.correctOptionIds).toEqual(['equal'])
     }
+  })
+
+  it('forced equal compare grades Equal — not left/right', () => {
+    const q = generateCompareQuestion(true)
+    expect(q.battle.winner).toBe('draw')
+    expect(q.correctOptionIds).toEqual(['equal'])
+    expect(q.correctOptionIds).not.toContain('left')
+    expect(q.correctOptionIds).not.toContain('right')
+    expect(calculateTruePower(q.clashA.base, q.clashA.exponent)).toBe(
+      calculateTruePower(q.clashB.base, q.clashB.exponent),
+    )
+  })
+
+  it('5⁰ vs 1⁵ are equal under true math (void game power stays 0)', () => {
+    const fiveZero = HEROES.find((h) => h.base === 5 && h.exponent === 0)!
+    const oneFive = HEROES.find((h) => h.base === 1 && h.exponent === 5)!
+    expect(calculateTruePower(5, 0)).toBe(1)
+    expect(calculateTruePower(1, 5)).toBe(1)
+    expect(5 ** 0).toBe(1)
+    expect(1 ** 5).toBe(1)
+    expect(calculatePower(5, 0)).toBe(0)
+    expect(fiveZero.power).toBe(0)
+    expect(oneFive.power).toBe(1)
+
+    const battle = resolveTrueBattle(fiveZero, oneFive)
+    expect(battle.winner).toBe('draw')
+    expect(battle.powerA).toBe(1)
+    expect(battle.powerB).toBe(1)
+    expect(battle.explanation).toContain('=')
   })
 
   it('identify questions have one correct expression for the subject', () => {
@@ -45,13 +77,28 @@ describe('questionEngine', () => {
     expect(correct?.label).toMatch(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/)
   })
 
-  it('predict questions match battle outcome', () => {
+  it('predict questions match true-math battle outcome', () => {
     const q = generatePredictQuestion()
     expect(q.type).toBe('predict')
     expect(q.options).toHaveLength(3)
     const expected =
       q.battle.winner === 'draw' ? 'draw' : q.battle.winner === 'a' ? 'a' : 'b'
     expect(q.correctOptionIds).toEqual([expected])
+    expect(resolveTrueBattle(q.clashA, q.clashB).winner).toBe(q.battle.winner)
+  })
+
+  it('forced equal predict marks Draw correct', () => {
+    const q = generatePredictQuestion(true)
+    expect(q.battle.winner).toBe('draw')
+    expect(q.correctOptionIds).toEqual(['draw'])
+  })
+
+  it('can pick equal true-power hero pairs', () => {
+    const pair = pickEqualTruePowerPair()
+    expect(pair).not.toBeNull()
+    const [a, b] = pair!
+    expect(a.id).not.toBe(b.id)
+    expect(calculateTruePower(a.base, a.exponent)).toBe(calculateTruePower(b.base, b.exponent))
   })
 
   it('cycles question types by round', () => {
@@ -64,7 +111,7 @@ describe('questionEngine', () => {
   })
 
   it('awards streak points on correct answers and resets on miss', () => {
-    const q = generateCompareQuestion()
+    const q = generateCompareQuestion(false)
     const correctId = q.correctOptionIds[0]!
     const wrongId = q.options.find((o) => !q.correctOptionIds.includes(o.id))?.id ?? correctId
 
@@ -80,14 +127,9 @@ describe('questionEngine', () => {
     expect(result.state.score).toBe(125 + 150)
 
     result = applyAnswer(result.state, q, wrongId)
-    if (wrongId === correctId) {
-      // draw-style compare where both are correct — skip miss branch
-      expect(result.outcome.correct).toBe(true)
-    } else {
-      expect(result.outcome.correct).toBe(false)
-      expect(result.outcome.chargedSide).toBe('rival')
-      expect(result.state.streak).toBe(0)
-    }
+    expect(result.outcome.correct).toBe(false)
+    expect(result.outcome.chargedSide).toBe('rival')
+    expect(result.state.streak).toBe(0)
   })
 
   it('grades runs from accuracy', () => {

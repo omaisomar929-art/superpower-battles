@@ -117,8 +117,8 @@ export function QuestionMode() {
           <p className="text-[11px] uppercase tracking-[0.4em] text-amber-400/80">Quiz → Clash</p>
           <h1 className="font-display text-2xl tracking-widest text-amber-200 sm:text-4xl">QUESTION MODE</h1>
           <p className="mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
-            Answer math and hero trivia. Correct answers charge your champion — wrong answers feed the rival.
-            Then a short fight proves the numbers.
+            Answer with true math (n⁰ = 1 — so 5⁰ equals 1⁵). Correct answers charge your champion; misses feed
+            the rival. Then a short fight proves the numbers.
           </p>
         </div>
         {run && champion && (

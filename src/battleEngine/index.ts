@@ -1,5 +1,9 @@
 import type { Hero } from '../heroes/types'
-import { explainComparison } from '../mathEngine'
+import {
+  calculateTruePower,
+  explainComparison,
+  explainTrueComparison,
+} from '../mathEngine'
 
 export type BattleOutcome = 'a' | 'b' | 'draw'
 
@@ -16,16 +20,13 @@ export interface BattleResult {
   expressionB: string
 }
 
-export function resolveBattle(fighterA: Hero, fighterB: Hero): BattleResult {
-  const powerA = fighterA.power
-  const powerB = fighterB.power
-  const explanation = explainComparison(
-    fighterA.base,
-    fighterA.exponent,
-    fighterB.base,
-    fighterB.exponent,
-  )
-
+function buildBattleResult(
+  fighterA: Hero,
+  fighterB: Hero,
+  powerA: number,
+  powerB: number,
+  explanation: string,
+): BattleResult {
   if (powerA > powerB) {
     return {
       fighterA,
@@ -68,6 +69,35 @@ export function resolveBattle(fighterA: Hero, fighterB: Hero): BattleResult {
     expressionA: fighterA.expression,
     expressionB: fighterB.expression,
   }
+}
+
+/** Arena / Versus: uses stored hero.power (void n⁰ → game 0). */
+export function resolveBattle(fighterA: Hero, fighterB: Hero): BattleResult {
+  const powerA = fighterA.power
+  const powerB = fighterB.power
+  const explanation = explainComparison(
+    fighterA.base,
+    fighterA.exponent,
+    fighterB.base,
+    fighterB.exponent,
+  )
+  return buildBattleResult(fighterA, fighterB, powerA, powerB, explanation)
+}
+
+/**
+ * Question Mode: compare with true mathematical base^exponent
+ * (n⁰ = 1), ignoring the void combat override.
+ */
+export function resolveTrueBattle(fighterA: Hero, fighterB: Hero): BattleResult {
+  const powerA = calculateTruePower(fighterA.base, fighterA.exponent)
+  const powerB = calculateTruePower(fighterB.base, fighterB.exponent)
+  const explanation = explainTrueComparison(
+    fighterA.base,
+    fighterA.exponent,
+    fighterB.base,
+    fighterB.exponent,
+  )
+  return buildBattleResult(fighterA, fighterB, powerA, powerB, explanation)
 }
 
 export function canFight(fighterA: Hero | null, fighterB: Hero | null, mirrorMode = false): boolean {

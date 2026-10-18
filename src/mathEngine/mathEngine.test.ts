@@ -10,10 +10,14 @@ import {
 } from '../heroes/data'
 import {
   calculatePower,
+  calculateTruePower,
   comparePowers,
   explainComparison,
+  explainTrueComparison,
+  formatExpandedEquation,
   formatExpression,
   formatExpressionAscii,
+  toExpandedForm,
   toSuperscript,
 } from './index'
 import { resolveBattle } from '../battleEngine'
@@ -174,6 +178,24 @@ describe('math helpers', () => {
     expect(calculatePower(0, 0)).toBe(0)
     expect(calculatePower(5, 0)).toBe(0)
     expect(calculatePower(10, 0)).toBe(0)
+  })
+
+  it('calculateTruePower uses mathematical n⁰ = 1', () => {
+    expect(calculateTruePower(5, 0)).toBe(1)
+    expect(calculateTruePower(1, 5)).toBe(1)
+    expect(calculateTruePower(0, 0)).toBe(1)
+    expect(calculateTruePower(2, 3)).toBe(8)
+    expect(calculateTruePower(0, 3)).toBe(0)
+    expect(explainTrueComparison(5, 0, 1, 5)).toBe('5⁰=1 = 1⁵=1')
+  })
+
+  it('expanded form for place-value powers of ten', () => {
+    expect(toExpandedForm(540)).toBe('5×10² + 4×10¹')
+    expect(formatExpandedEquation(540)).toBe('540 = 5×10² + 4×10¹')
+    expect(toExpandedForm(100)).toBe('1×10²')
+    expect(toExpandedForm(7)).toBe('7×10⁰')
+    expect(toExpandedForm(0)).toBe('0')
+    expect(formatExpandedEquation(0)).toBe('0 = 0')
   })
 })
 
