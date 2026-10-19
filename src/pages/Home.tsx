@@ -97,6 +97,9 @@ export function Home() {
           <Link to="/learning/expand" className="btn-secondary">
             EXPAND MODE
           </Link>
+          <Link to="/learning/power" className="btn-primary">
+            POWER MODE
+          </Link>
           <Link to="/question" className="btn-primary">
             QUESTION MODE
           </Link>

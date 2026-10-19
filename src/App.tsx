@@ -8,6 +8,7 @@ import { Arena } from './pages/Arena'
 import { Versus } from './pages/Versus'
 import { QuestionMode } from './pages/QuestionMode'
 import { ExpandMode } from './pages/ExpandMode'
+import { PowerMode } from './pages/PowerMode'
 
 export default function App() {
   return (
@@ -21,6 +22,8 @@ export default function App() {
             <Route path="select" element={<FighterSelect />} />
             <Route path="expand" element={<ExpandMode />} />
             <Route path="learning/expand" element={<ExpandMode />} />
+            <Route path="power" element={<PowerMode />} />
+            <Route path="learning/power" element={<PowerMode />} />
             <Route path="arena" element={<Arena />} />
             <Route path="versus" element={<Versus />} />
             <Route path="question" element={<QuestionMode />} />

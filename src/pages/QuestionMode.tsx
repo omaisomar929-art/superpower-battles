@@ -26,6 +26,9 @@ const TYPE_LABEL: Record<Question['type'], string> = {
   compare: 'Compare Powers',
   identify: 'Identify Expression',
   predict: 'Who Wins?',
+  evaluate: 'Square / Cube Value',
+  squareCubeCompare: 'Square vs Cube',
+  identifyValue: 'Identify Square/Cube',
 }
 
 export function QuestionMode() {
@@ -117,8 +120,9 @@ export function QuestionMode() {
           <p className="text-[11px] uppercase tracking-[0.4em] text-amber-400/80">Quiz → Clash</p>
           <h1 className="font-display text-2xl tracking-widest text-amber-200 sm:text-4xl">QUESTION MODE</h1>
           <p className="mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
-            Answer with true math (n⁰ = 1 — so 5⁰ equals 1⁵). Correct answers charge your champion; misses feed
-            the rival. Then a short fight proves the numbers.
+            Answer with true math (n⁰ = 1 — so 5⁰ equals 1⁵). Includes squares & cubes (What is 6²? Which is
+            larger: 4² or 2³?). Correct answers charge your champion; misses feed the rival. Then a short fight
+            proves the numbers.
           </p>
         </div>
         {run && champion && (
@@ -230,7 +234,7 @@ export function QuestionMode() {
                       <div className="text-center">
                         <HeroArt hero={question.clashA} size={120} animated />
                         <p className="mt-2 text-xs text-slate-300">{question.clashA.name}</p>
-                        {question.type === 'compare' && (
+                        {(question.type === 'compare' || question.type === 'squareCubeCompare') && (
                           <p className="font-mono text-sky-300">
                             <MathExpression base={question.clashA.base} exponent={question.clashA.exponent} />
                           </p>
@@ -246,7 +250,7 @@ export function QuestionMode() {
                       <div className="text-center">
                         <HeroArt hero={question.clashB} size={120} animated />
                         <p className="mt-2 text-xs text-slate-300">{question.clashB.name}</p>
-                        {question.type === 'compare' && (
+                        {(question.type === 'compare' || question.type === 'squareCubeCompare') && (
                           <p className="font-mono text-rose-300">
                             <MathExpression base={question.clashB.base} exponent={question.clashB.exponent} />
                           </p>

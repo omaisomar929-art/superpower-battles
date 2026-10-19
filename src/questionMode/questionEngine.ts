@@ -1,9 +1,20 @@
 import type { Hero } from '../heroes/types'
-import { HEROES, getRandomHeroes } from '../heroes/data'
+import { HEROES, getHeroByPowerPair, getRandomHeroes } from '../heroes/data'
 import { resolveTrueBattle, type BattleOutcome, type BattleResult } from '../battleEngine'
-import { calculateTruePower, formatExpression } from '../mathEngine'
+import {
+  calculateTruePower,
+  formatExpression,
+  formatPowerExpansion,
+  raiseToPower,
+} from '../mathEngine'
 
-export type QuestionType = 'compare' | 'identify' | 'predict'
+export type QuestionType =
+  | 'compare'
+  | 'identify'
+  | 'predict'
+  | 'evaluate'
+  | 'squareCubeCompare'
+  | 'identifyValue'
 
 export interface QuestionOption {
   id: string
@@ -260,13 +271,194 @@ export function generatePredictQuestion(forceEqual = false): Question {
   }
 }
 
-const TYPE_CYCLE: QuestionType[] = ['compare', 'identify', 'predict']
+/** What is n² / n³? Numeric multiple choice with true math. */
+export function generateEvaluateQuestion(): Question {
+  const exponent = Math.random() < 0.55 ? 2 : 3
+  const basePool = exponent === 2 ? [2, 3, 4, 5, 6, 7, 8, 9, 10] : [2, 3, 4, 5, 6]
+  const base = basePool[Math.floor(Math.random() * basePool.length)]!
+  const value = raiseToPower(base, exponent)
+  const expr = formatExpression(base, exponent)
+
+  const wrong = new Set<number>()
+  const decoyFns = [
+    () => raiseToPower(base, exponent === 2 ? 3 : 2),
+    () => base * exponent,
+    () => base + exponent,
+    () => raiseToPower(Math.max(base - 1, 1), exponent),
+    () => raiseToPower(base + 1, exponent),
+    () => base * base + (exponent === 2 ? base : 0),
+  ]
+  for (const fn of decoyFns) {
+    try {
+      const w = fn()
+      if (w !== value && Number.isSafeInteger(w) && w >= 0) wrong.add(w)
+    } catch {
+      /* skip overflow */
+    }
+    if (wrong.size >= 3) break
+  }
+  while (wrong.size < 3) {
+    wrong.add(value + wrong.size + 1)
+  }
+
+  const correct: QuestionOption = { id: 'correct', label: String(value) }
+  const decoys = [...wrong].slice(0, 3).map((n, i) => ({
+    id: `decoy-${i}`,
+    label: String(n),
+  }))
+  const options = shuffle([correct, ...decoys])
+
+  const heroA =
+    getHeroByPowerPair(base, exponent) ??
+    HEROES.find((h) => h.exponent === exponent) ??
+    HEROES[10]!
+  const heroB = getRandomHeroes(1, [heroA.id])[0]!
+  const battle = resolveTrueBattle(heroA, heroB)
+
+  return {
+    id: `evaluate-${base}-${exponent}-${Date.now()}`,
+    type: 'evaluate',
+    prompt: `What is ${expr}?`,
+    hint: exponent === 2 ? 'Square means multiply the base by itself.' : 'Cube means base × base × base.',
+    options,
+    correctOptionIds: ['correct'],
+    clashA: heroA,
+    clashB: heroB,
+    battle,
+    teach: formatPowerExpansion(base, exponent),
+  }
+}
+
+/** Which is larger: a² or b³? (or Equal). */
+export function generateSquareCubeCompareQuestion(): Question {
+  const leftExp = Math.random() < 0.5 ? 2 : 3
+  const rightExp = leftExp === 2 ? 3 : 2
+  const leftBase = leftExp === 2 ? [2, 3, 4, 5, 6, 7, 8][Math.floor(Math.random() * 7)]! : [2, 3, 4, 5][Math.floor(Math.random() * 4)]!
+  const rightBase =
+    rightExp === 2
+      ? [2, 3, 4, 5, 6, 7, 8][Math.floor(Math.random() * 7)]!
+      : [2, 3, 4, 5][Math.floor(Math.random() * 4)]!
+
+  const leftVal = raiseToPower(leftBase, leftExp)
+  const rightVal = raiseToPower(rightBase, rightExp)
+  const leftExpr = formatExpression(leftBase, leftExp)
+  const rightExpr = formatExpression(rightBase, rightExp)
+
+  const leftHero =
+    getHeroByPowerPair(leftBase, leftExp) ??
+    HEROES.find((h) => h.exponent === leftExp)!
+  const rightHero =
+    getHeroByPowerPair(rightBase, rightExp) ??
+    HEROES.find((h) => h.exponent === rightExp && h.id !== leftHero.id) ??
+    getRandomHeroes(1, [leftHero.id])[0]!
+  const battle = resolveTrueBattle(leftHero, rightHero)
+
+  const leftOpt: QuestionOption = { id: 'left', label: leftExpr, heroId: leftHero.id }
+  const rightOpt: QuestionOption = { id: 'right', label: rightExpr, heroId: rightHero.id }
+  const equalOpt: QuestionOption = { id: 'equal', label: 'Equal' }
+  const options = shuffle([leftOpt, rightOpt, equalOpt])
+
+  let correctOptionIds: string[]
+  let teach: string
+  if (leftVal > rightVal) {
+    correctOptionIds = ['left']
+    teach = `${leftExpr}=${leftVal} > ${rightExpr}=${rightVal}`
+  } else if (rightVal > leftVal) {
+    correctOptionIds = ['right']
+    teach = `${rightExpr}=${rightVal} > ${leftExpr}=${leftVal}`
+  } else {
+    correctOptionIds = ['equal']
+    teach = `${leftExpr}=${leftVal} = ${rightExpr}=${rightVal}`
+  }
+
+  return {
+    id: `sqcube-${leftBase}-${leftExp}-${rightBase}-${rightExp}-${Date.now()}`,
+    type: 'squareCubeCompare',
+    prompt: `Which is larger: ${leftExpr} or ${rightExpr}?`,
+    hint: 'Evaluate each square/cube, then compare. Equal values → pick Equal.',
+    options,
+    correctOptionIds,
+    clashA: leftHero,
+    clashB: rightHero,
+    battle,
+    teach,
+  }
+}
+
+/** Identify which expression equals a square or cube value (e.g. 64). */
+export function generateIdentifyValueQuestion(): Question {
+  const exponent = Math.random() < 0.5 ? 2 : 3
+  const basePool = exponent === 2 ? [2, 3, 4, 5, 6, 7, 8, 9, 10] : [2, 3, 4, 5]
+  const base = basePool[Math.floor(Math.random() * basePool.length)]!
+  const value = raiseToPower(base, exponent)
+  const correctExpr = formatExpression(base, exponent)
+
+  const decoys: string[] = []
+  const seen = new Set([correctExpr])
+  const candidates = shuffle(
+    HEROES.filter((h) => h.exponent === 2 || h.exponent === 3).map((h) =>
+      formatExpression(h.base, h.exponent),
+    ),
+  )
+  for (const expr of candidates) {
+    if (seen.has(expr)) continue
+    seen.add(expr)
+    decoys.push(expr)
+    if (decoys.length >= 3) break
+  }
+  while (decoys.length < 3) {
+    const b = 2 + decoys.length
+    const e = decoys.length % 2 === 0 ? 2 : 3
+    const expr = formatExpression(b, e)
+    if (!seen.has(expr)) {
+      seen.add(expr)
+      decoys.push(expr)
+    }
+  }
+
+  const correct: QuestionOption = { id: 'correct', label: correctExpr }
+  const options = shuffle([
+    correct,
+    ...decoys.slice(0, 3).map((label, i) => ({ id: `decoy-${i}`, label })),
+  ])
+
+  const heroA =
+    getHeroByPowerPair(base, exponent) ??
+    HEROES.find((h) => h.exponent === exponent)!
+  const heroB = getRandomHeroes(1, [heroA.id])[0]!
+  const battle = resolveTrueBattle(heroA, heroB)
+
+  return {
+    id: `idval-${base}-${exponent}-${Date.now()}`,
+    type: 'identifyValue',
+    prompt: `Which expression equals ${value.toLocaleString('en-US')}?`,
+    hint: exponent === 2 ? 'Find the matching square.' : 'Find the matching cube.',
+    options,
+    correctOptionIds: ['correct'],
+    clashA: heroA,
+    clashB: heroB,
+    battle,
+    teach: formatPowerExpansion(base, exponent),
+  }
+}
+
+const TYPE_CYCLE: QuestionType[] = [
+  'compare',
+  'identify',
+  'predict',
+  'evaluate',
+  'squareCubeCompare',
+  'identifyValue',
+]
 
 export function generateQuestion(state: QuestionRunState, type?: QuestionType): Question {
-  const picked = type ?? TYPE_CYCLE[(state.round - 1) % TYPE_CYCLE.length]
+  const picked = type ?? TYPE_CYCLE[(state.round - 1) % TYPE_CYCLE.length]!
   if (picked === 'compare') return generateCompareQuestion()
   if (picked === 'identify') return generateIdentifyQuestion(state.champion)
-  return generatePredictQuestion()
+  if (picked === 'predict') return generatePredictQuestion()
+  if (picked === 'evaluate') return generateEvaluateQuestion()
+  if (picked === 'squareCubeCompare') return generateSquareCubeCompareQuestion()
+  return generateIdentifyValueQuestion()
 }
 
 export function gradeLabel(state: QuestionRunState): string {

@@ -10,7 +10,7 @@ Pick two of **66 original heroes**:
 - **5 null-base** voids — `0¹`–`0⁵` (power **0**)
 - **11 power-zero void variants** — `0⁰`–`10⁰` with **game power 0** (math would say n⁰=1 for n≠0; these use a void override)
 
-Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), play **Question Mode** (quiz → clash), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode** grades with *true* math (n⁰ = 1). Equal true powers → Equal / Draw. Never random.
+Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), **Power Mode** (squares, cubes, and custom exponents), play **Question Mode** (quiz → clash, including square/cube prompts), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode** grades with *true* math (n⁰ = 1). Equal true powers → Equal / Draw. Never random.
 
 No video render server. No separate API. Just the site.
 
@@ -36,13 +36,21 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 1. From Learning Mode → **EXPAND MODE**, or open `/learning/expand` (also `/expand`)
 2. Enter or pick a non-negative integer
 3. See place-value expanded form with Unicode superscripts, e.g. `540 = 5×10² + 4×10¹`
-4. Conventions: `0` → `0`; skip zero digits (`100 = 1×10²`); ones place as `×10⁰` (`7 = 7×10⁰`)
+4. Place-value heroes charge, clash, and victory-dance to prove the expansion
+5. Conventions: `0` → `0`; skip zero digits (`100 = 1×10²`); ones place as `×10⁰` (`7 = 7×10⁰`)
+
+### Power Mode (nested under Learning)
+
+1. From Home / Learning → **POWER MODE**, or open `/learning/power` (also `/power`)
+2. Choose **Squared** (exp 2), **Cubed** (exp 3), or **Other** (declare a positive integer exponent)
+3. Enter a base → **Compute Power** — e.g. `3² = 3×3 = 9`, `2³ = 8`, `2⁴ = 16`
+4. Related heroes fight with ability VFX and a victory dance on the result reveal
 
 ## Question Mode (quiz → clash)
 
 1. **Home** → **Question Mode** (or **Question** in the nav / `/question`; `/quiz` redirects)
 2. Pick a champion (or randomize)
-3. Answer rotating question types: **compare powers**, **identify expression**, **who wins**
+3. Answer rotating question types: **compare powers**, **identify expression**, **who wins**, **square/cube value** (What is 6²?), **square vs cube** (Which is larger: 4² or 2³?), **identify square/cube value**
 4. Comparisons use **true math** (`n⁰ = 1`), so `5⁰` vs `1⁵` is Equal / Draw — not “void is weaker.” Combat void override (game power 0) still applies in Versus / Learning arena only.
 5. Correct answers charge your side; misses charge the rival — then a short `FightSequence` proves the math
 6. Track score, streak, and grade; **Next Question** or **New Champion**

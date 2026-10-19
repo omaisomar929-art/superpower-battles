@@ -14,9 +14,14 @@ import {
   comparePowers,
   explainComparison,
   explainTrueComparison,
+  explainPower,
   formatExpandedEquation,
   formatExpression,
   formatExpressionAscii,
+  formatPowerExpansion,
+  parseNonNegativeInt,
+  parsePositiveInt,
+  raiseToPower,
   toExpandedForm,
   toSuperscript,
 } from './index'
@@ -196,6 +201,22 @@ describe('math helpers', () => {
     expect(toExpandedForm(7)).toBe('7×10⁰')
     expect(toExpandedForm(0)).toBe('0')
     expect(formatExpandedEquation(0)).toBe('0 = 0')
+  })
+
+  it('raises to powers with step-by-step expansion', () => {
+    expect(raiseToPower(3, 2)).toBe(9)
+    expect(raiseToPower(2, 3)).toBe(8)
+    expect(raiseToPower(2, 4)).toBe(16)
+    expect(formatPowerExpansion(3, 2)).toBe('3² = 3×3 = 9')
+    expect(formatPowerExpansion(2, 3)).toBe('2³ = 2×2×2 = 8')
+    expect(formatPowerExpansion(2, 4)).toBe('2⁴ = 2×2×2×2 = 16')
+    expect(explainPower(3, 2)).toContain('squared')
+    expect(explainPower(2, 3)).toContain('cubed')
+    expect(parseNonNegativeInt('540')).toBe(540)
+    expect(parseNonNegativeInt('-1')).toBeNull()
+    expect(parseNonNegativeInt('3.5')).toBeNull()
+    expect(parsePositiveInt('4')).toBe(4)
+    expect(parsePositiveInt('0')).toBeNull()
   })
 })
 

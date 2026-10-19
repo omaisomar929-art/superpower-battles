@@ -79,12 +79,20 @@ export function FighterSelect() {
             variants (n⁰) have game power 0.
           </p>
         </div>
-        <Link
-          to="/learning/expand"
-          className="btn-secondary inline-flex shrink-0 items-center justify-center text-xs tracking-[0.2em]"
-        >
-          EXPAND MODE
-        </Link>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Link
+            to="/learning/expand"
+            className="btn-secondary inline-flex items-center justify-center text-xs tracking-[0.2em]"
+          >
+            EXPAND MODE
+          </Link>
+          <Link
+            to="/learning/power"
+            className="btn-primary inline-flex items-center justify-center text-xs tracking-[0.2em]"
+          >
+            POWER MODE
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto_1fr] items-start">

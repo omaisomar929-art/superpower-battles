@@ -6,12 +6,16 @@ import {
   applyAnswer,
   createRun,
   generateCompareQuestion,
+  generateEvaluateQuestion,
   generateIdentifyQuestion,
+  generateIdentifyValueQuestion,
   generatePredictQuestion,
   generateQuestion,
+  generateSquareCubeCompareQuestion,
   gradeLabel,
   pickEqualTruePowerPair,
 } from './questionEngine'
+import { raiseToPower } from '../mathEngine'
 
 describe('questionEngine', () => {
   const champion = HEROES[10]!
@@ -108,6 +112,47 @@ describe('questionEngine', () => {
     expect(generateQuestion(state).type).toBe('identify')
     state = { ...state, round: 3 }
     expect(generateQuestion(state).type).toBe('predict')
+    state = { ...state, round: 4 }
+    expect(generateQuestion(state).type).toBe('evaluate')
+    state = { ...state, round: 5 }
+    expect(generateQuestion(state).type).toBe('squareCubeCompare')
+    state = { ...state, round: 6 }
+    expect(generateQuestion(state).type).toBe('identifyValue')
+  })
+
+  it('evaluate questions ask for square or cube values', () => {
+    const q = generateEvaluateQuestion()
+    expect(q.type).toBe('evaluate')
+    expect(q.prompt).toMatch(/What is \d+[²³]/)
+    expect(q.correctOptionIds).toEqual(['correct'])
+    const correct = q.options.find((o) => o.id === 'correct')
+    expect(correct).toBeDefined()
+    expect(Number(correct!.label)).toBeGreaterThan(0)
+    expect(q.teach).toMatch(/=/)
+  })
+
+  it('square/cube compare grades the larger expression (or Equal)', () => {
+    const q = generateSquareCubeCompareQuestion()
+    expect(q.type).toBe('squareCubeCompare')
+    expect(q.options.some((o) => o.id === 'equal')).toBe(true)
+    expect(q.correctOptionIds).toHaveLength(1)
+    expect(['left', 'right', 'equal']).toContain(q.correctOptionIds[0])
+    // Prompt mentions both superscripts
+    expect(q.prompt).toMatch(/[²³]/)
+  })
+
+  it('identifyValue picks the expression matching a square/cube number', () => {
+    const q = generateIdentifyValueQuestion()
+    expect(q.type).toBe('identifyValue')
+    expect(q.correctOptionIds).toEqual(['correct'])
+    const correct = q.options.find((o) => o.id === 'correct')!
+    expect(correct.label).toMatch(/[²³]/)
+    // Reconstruct value from teach expansion (ends with = N)
+    const match = q.teach.match(/=\s*([\d,]+)\s*$/)
+    expect(match).toBeTruthy()
+    const value = Number(match![1]!.replace(/,/g, ''))
+    expect(q.prompt).toContain(value.toLocaleString('en-US'))
+    expect(raiseToPower(2, 2)).toBe(4)
   })
 
   it('awards streak points on correct answers and resets on miss', () => {

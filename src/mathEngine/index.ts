@@ -134,3 +134,65 @@ export function toExpandedForm(value: number): string {
 export function formatExpandedEquation(value: number): string {
   return `${value} = ${toExpandedForm(value)}`
 }
+
+/** Raise base^exponent for Power Mode (true math; any non-neg base, positive exp). */
+export function raiseToPower(base: number, exponent: number): number {
+  if (!Number.isInteger(base) || base < 0) {
+    throw new Error('Base must be a non-negative integer')
+  }
+  if (!Number.isInteger(exponent) || exponent < 1) {
+    throw new Error('Exponent must be a positive integer')
+  }
+  const result = base ** exponent
+  if (!Number.isSafeInteger(result)) {
+    throw new Error('Result exceeds safe integer range')
+  }
+  return result
+}
+
+/**
+ * Step-by-step expansion, e.g. `3² = 3×3 = 9` or `2⁴ = 2×2×2×2 = 16`.
+ * For large exponents, shows a shortened product then the value.
+ */
+export function formatPowerExpansion(base: number, exponent: number): string {
+  const value = raiseToPower(base, exponent)
+  const expr = formatExpression(base, exponent)
+  if (exponent === 1) {
+    return `${expr} = ${base}`
+  }
+  const factors = Array.from({ length: exponent }, () => String(base))
+  const MAX_SHOW = 8
+  const product =
+    factors.length <= MAX_SHOW
+      ? factors.join('×')
+      : `${factors.slice(0, 4).join('×')}×…×${base}`
+  return `${expr} = ${product} = ${value.toLocaleString('en-US')}`
+}
+
+/** Short teaching line for Power Mode results. */
+export function explainPower(base: number, exponent: number): string {
+  const value = raiseToPower(base, exponent)
+  const expr = formatExpression(base, exponent)
+  if (exponent === 2) {
+    return `${expr} means ${base} squared — ${base}×${base} = ${value.toLocaleString('en-US')}.`
+  }
+  if (exponent === 3) {
+    return `${expr} means ${base} cubed — ${base}×${base}×${base} = ${value.toLocaleString('en-US')}.`
+  }
+  return `${expr} multiplies ${base} by itself ${exponent} times → ${value.toLocaleString('en-US')}.`
+}
+
+export function parseNonNegativeInt(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  if (!/^\d+$/.test(trimmed)) return null
+  const n = Number(trimmed)
+  if (!Number.isSafeInteger(n) || n < 0) return null
+  return n
+}
+
+export function parsePositiveInt(raw: string): number | null {
+  const n = parseNonNegativeInt(raw)
+  if (n === null || n < 1) return null
+  return n
+}

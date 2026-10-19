@@ -2,17 +2,39 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Sparkles } from 'lucide-react'
-import { formatExpandedEquation, toExpandedForm } from '../mathEngine'
+import { formatExpandedEquation, parseNonNegativeInt, toExpandedForm } from '../mathEngine'
+import { HEROES, getHeroByPowerPair, getRandomHeroes } from '../heroes/data'
+import type { Hero } from '../heroes/types'
+import { HeroArt } from '../heroes/HeroArt'
+import { LearningActionStage } from '../components/LearningActionStage'
 
 const PRESETS = [0, 7, 100, 540, 2048, 10_005] as const
 
-function parseNonNegativeInt(raw: string): number | null {
-  const trimmed = raw.trim()
-  if (!trimmed) return null
-  if (!/^\d+$/.test(trimmed)) return null
-  const n = Number(trimmed)
-  if (!Number.isSafeInteger(n) || n < 0) return null
-  return n
+function placeExponents(value: number): number[] {
+  if (value === 0) return [0]
+  const digits = String(value)
+  const exps: number[] = []
+  for (let i = 0; i < digits.length; i += 1) {
+    if (Number(digits[i]) === 0) continue
+    exps.push(digits.length - 1 - i)
+  }
+  return exps.length ? exps : [0]
+}
+
+function pickExpandHeroes(value: number): [Hero, Hero] {
+  const places = placeExponents(value)
+  const top = Math.min(places[0] ?? 0, 5)
+  const second = Math.min(places[1] ?? (top === 0 ? 1 : 0), 5)
+  const heroA =
+    getHeroByPowerPair(10, top) ??
+    getHeroByPowerPair(Math.min(Math.max(value % 10 || 1, 1), 10), top) ??
+    HEROES.find((h) => h.exponent === top) ??
+    HEROES[20]!
+  const heroB =
+    getHeroByPowerPair(10, second) ??
+    getRandomHeroes(1, [heroA.id])[0] ??
+    HEROES.find((h) => h.id !== heroA.id)!
+  return [heroA, heroB]
 }
 
 export function ExpandMode() {
@@ -21,6 +43,7 @@ export function ExpandMode() {
   const equation = value === null ? null : formatExpandedEquation(value)
   const expanded = value === null ? null : toExpandedForm(value)
   const invalid = raw.trim().length > 0 && value === null
+  const heroes = useMemo(() => (value === null ? null : pickExpandHeroes(value)), [value])
 
   return (
     <div className="relative mx-auto min-h-[calc(100vh-8rem)] max-w-3xl overflow-hidden px-4 py-8">
@@ -34,16 +57,42 @@ export function ExpandMode() {
         >
           10ⁿ
         </motion.div>
+        {heroes && value !== null && value !== 0 ? (
+          <>
+            <motion.div
+              className="absolute -left-6 top-36 opacity-35"
+              animate={{ y: [0, -12, 0], x: [0, 8, 0] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <HeroArt hero={heroes[0]} size={160} animated />
+            </motion.div>
+            <motion.div
+              className="absolute -right-6 top-48 opacity-35"
+              animate={{ y: [0, 10, 0], x: [0, -10, 0] }}
+              transition={{ duration: 5.2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <HeroArt hero={heroes[1]} size={150} animated />
+            </motion.div>
+          </>
+        ) : null}
       </div>
 
       <div className="relative z-10">
-        <Link
-          to="/select"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-widest text-slate-400 transition hover:text-sky-300"
-        >
-          <ArrowLeft size={14} />
-          LEARNING MODE
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/select"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-widest text-slate-400 transition hover:text-sky-300"
+          >
+            <ArrowLeft size={14} />
+            LEARNING MODE
+          </Link>
+          <Link
+            to="/learning/power"
+            className="text-xs font-semibold tracking-widest text-slate-500 transition hover:text-rose-300"
+          >
+            POWER MODE
+          </Link>
+        </div>
 
         <motion.h1
           className="mt-4 font-display text-3xl tracking-[0.2em] text-amber-200 sm:text-4xl"
@@ -59,7 +108,8 @@ export function ExpandMode() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.5 }}
         >
-          Break a whole number into place-value powers of ten — the same language as hero exponents.
+          Break a whole number into place-value powers of ten — then watch place-value heroes duel over the
+          expansion.
         </motion.p>
 
         <motion.div
@@ -126,7 +176,7 @@ export function ExpandMode() {
                     transition={{ delay: 0.25 }}
                   >
                     <Sparkles size={12} className="text-amber-300/80" />
-                    Place values · zero digits skipped
+                    Place values · zero digits skipped · heroes charge next
                   </motion.div>
                 </motion.div>
               ) : (
@@ -143,6 +193,17 @@ export function ExpandMode() {
             </AnimatePresence>
           </div>
         </motion.div>
+
+        {equation && heroes && value !== null ? (
+          <LearningActionStage
+            heroA={heroes[0]}
+            heroB={heroes[1]}
+            headline={equation}
+            teach="Place-value heroes clash — higher powers of ten carry more weight in the expansion."
+            resultKey={equation}
+            arena="storm-spire"
+          />
+        ) : null}
 
         <motion.aside
           className="mt-6 rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-sm leading-relaxed text-slate-400"
