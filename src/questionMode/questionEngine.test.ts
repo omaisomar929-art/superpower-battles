@@ -7,15 +7,12 @@ import {
   createRun,
   generateCompareQuestion,
   generateEvaluateQuestion,
-  generateIdentifyQuestion,
-  generateIdentifyValueQuestion,
-  generatePredictQuestion,
   generateQuestion,
-  generateSquareCubeCompareQuestion,
+  generateStrongerQuestion,
+  generateWeakerQuestion,
   gradeLabel,
   pickEqualTruePowerPair,
 } from './questionEngine'
-import { raiseToPower } from '../mathEngine'
 
 describe('questionEngine', () => {
   const champion = HEROES[10]!
@@ -27,31 +24,46 @@ describe('questionEngine', () => {
     expect(run.round).toBe(1)
   })
 
-  it('compare questions mark the stronger expression correct (true math)', () => {
-    const q = generateCompareQuestion()
-    expect(q.type).toBe('compare')
-    expect(q.options).toHaveLength(3)
-    expect(q.options.some((o) => o.id === 'equal')).toBe(true)
-    const battle = resolveTrueBattle(q.clashA, q.clashB)
-    expect(q.battle.winner).toBe(battle.winner)
-    if (battle.winner === 'a') {
-      expect(q.correctOptionIds).toEqual(['left'])
-    } else if (battle.winner === 'b') {
-      expect(q.correctOptionIds).toEqual(['right'])
-    } else {
-      expect(q.correctOptionIds).toEqual(['equal'])
+  it('stronger questions pick unequal powers and mark the stronger hero', () => {
+    for (let i = 0; i < 20; i += 1) {
+      const q = generateStrongerQuestion()
+      expect(q.type).toBe('stronger')
+      expect(q.options).toHaveLength(2)
+      expect(q.options.some((o) => o.id === 'equal')).toBe(false)
+      expect(q.battle.winner).not.toBe('draw')
+      expect(calculateTruePower(q.clashA.base, q.clashA.exponent)).not.toBe(
+        calculateTruePower(q.clashB.base, q.clashB.exponent),
+      )
+      const battle = resolveTrueBattle(q.clashA, q.clashB)
+      expect(q.battle.winner).toBe(battle.winner)
+      if (battle.winner === 'a') {
+        expect(q.correctOptionIds).toEqual(['left'])
+      } else {
+        expect(q.correctOptionIds).toEqual(['right'])
+      }
     }
   })
 
-  it('forced equal compare grades Equal — not left/right', () => {
+  it('weaker questions pick unequal powers and mark the weaker hero', () => {
+    for (let i = 0; i < 20; i += 1) {
+      const q = generateWeakerQuestion()
+      expect(q.type).toBe('weaker')
+      expect(q.options).toHaveLength(2)
+      expect(q.battle.winner).not.toBe('draw')
+      const battle = resolveTrueBattle(q.clashA, q.clashB)
+      if (battle.winner === 'a') {
+        expect(q.correctOptionIds).toEqual(['right'])
+      } else {
+        expect(q.correctOptionIds).toEqual(['left'])
+      }
+    }
+  })
+
+  it('generateCompareQuestion aliases stronger (no equal pairs)', () => {
     const q = generateCompareQuestion(true)
-    expect(q.battle.winner).toBe('draw')
-    expect(q.correctOptionIds).toEqual(['equal'])
-    expect(q.correctOptionIds).not.toContain('left')
-    expect(q.correctOptionIds).not.toContain('right')
-    expect(calculateTruePower(q.clashA.base, q.clashA.exponent)).toBe(
-      calculateTruePower(q.clashB.base, q.clashB.exponent),
-    )
+    expect(q.type).toBe('stronger')
+    expect(q.battle.winner).not.toBe('draw')
+    expect(q.options).toHaveLength(2)
   })
 
   it('5⁰ vs 1⁵ are equal under true math (void game power stays 0)', () => {
@@ -72,32 +84,7 @@ describe('questionEngine', () => {
     expect(battle.explanation).toContain('=')
   })
 
-  it('identify questions have one correct expression for the subject', () => {
-    const q = generateIdentifyQuestion(champion)
-    expect(q.type).toBe('identify')
-    expect(q.options.length).toBeGreaterThanOrEqual(2)
-    expect(q.correctOptionIds).toEqual(['correct'])
-    const correct = q.options.find((o) => o.id === 'correct')
-    expect(correct?.label).toMatch(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/)
-  })
-
-  it('predict questions match true-math battle outcome', () => {
-    const q = generatePredictQuestion()
-    expect(q.type).toBe('predict')
-    expect(q.options).toHaveLength(3)
-    const expected =
-      q.battle.winner === 'draw' ? 'draw' : q.battle.winner === 'a' ? 'a' : 'b'
-    expect(q.correctOptionIds).toEqual([expected])
-    expect(resolveTrueBattle(q.clashA, q.clashB).winner).toBe(q.battle.winner)
-  })
-
-  it('forced equal predict marks Draw correct', () => {
-    const q = generatePredictQuestion(true)
-    expect(q.battle.winner).toBe('draw')
-    expect(q.correctOptionIds).toEqual(['draw'])
-  })
-
-  it('can pick equal true-power hero pairs', () => {
+  it('can pick equal true-power hero pairs (for math checks, not quiz gen)', () => {
     const pair = pickEqualTruePowerPair()
     expect(pair).not.toBeNull()
     const [a, b] = pair!
@@ -105,19 +92,15 @@ describe('questionEngine', () => {
     expect(calculateTruePower(a.base, a.exponent)).toBe(calculateTruePower(b.base, b.exponent))
   })
 
-  it('cycles question types by round', () => {
+  it('cycles only stronger → weaker → evaluate', () => {
     let state = createRun(champion)
-    expect(generateQuestion(state).type).toBe('compare')
+    expect(generateQuestion(state).type).toBe('stronger')
     state = { ...state, round: 2 }
-    expect(generateQuestion(state).type).toBe('identify')
+    expect(generateQuestion(state).type).toBe('weaker')
     state = { ...state, round: 3 }
-    expect(generateQuestion(state).type).toBe('predict')
-    state = { ...state, round: 4 }
     expect(generateQuestion(state).type).toBe('evaluate')
-    state = { ...state, round: 5 }
-    expect(generateQuestion(state).type).toBe('squareCubeCompare')
-    state = { ...state, round: 6 }
-    expect(generateQuestion(state).type).toBe('identifyValue')
+    state = { ...state, round: 4 }
+    expect(generateQuestion(state).type).toBe('stronger')
   })
 
   it('evaluate questions ask for square or cube values', () => {
@@ -131,32 +114,8 @@ describe('questionEngine', () => {
     expect(q.teach).toMatch(/=/)
   })
 
-  it('square/cube compare grades the larger expression (or Equal)', () => {
-    const q = generateSquareCubeCompareQuestion()
-    expect(q.type).toBe('squareCubeCompare')
-    expect(q.options.some((o) => o.id === 'equal')).toBe(true)
-    expect(q.correctOptionIds).toHaveLength(1)
-    expect(['left', 'right', 'equal']).toContain(q.correctOptionIds[0])
-    // Prompt mentions both superscripts
-    expect(q.prompt).toMatch(/[²³]/)
-  })
-
-  it('identifyValue picks the expression matching a square/cube number', () => {
-    const q = generateIdentifyValueQuestion()
-    expect(q.type).toBe('identifyValue')
-    expect(q.correctOptionIds).toEqual(['correct'])
-    const correct = q.options.find((o) => o.id === 'correct')!
-    expect(correct.label).toMatch(/[²³]/)
-    // Reconstruct value from teach expansion (ends with = N)
-    const match = q.teach.match(/=\s*([\d,]+)\s*$/)
-    expect(match).toBeTruthy()
-    const value = Number(match![1]!.replace(/,/g, ''))
-    expect(q.prompt).toContain(value.toLocaleString('en-US'))
-    expect(raiseToPower(2, 2)).toBe(4)
-  })
-
   it('awards streak points on correct answers and resets on miss', () => {
-    const q = generateCompareQuestion(false)
+    const q = generateStrongerQuestion()
     const correctId = q.correctOptionIds[0]!
     const wrongId = q.options.find((o) => !q.correctOptionIds.includes(o.id))?.id ?? correctId
 

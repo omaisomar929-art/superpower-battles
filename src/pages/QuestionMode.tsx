@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { HelpCircle, Zap, Flame, Trophy } from 'lucide-react'
-import { HEROES, getRandomHeroes } from '../heroes/data'
+import { getRandomHeroes } from '../heroes/data'
 import type { Hero } from '../heroes/types'
 import { HeroArt } from '../heroes/HeroArt'
 import { MathExpression } from '../components/MathExpression'
 import { FightSequence } from '../animations/FightSequence'
 import { playFightCue } from '../audio/soundEngine'
+import { calculateTruePower } from '../mathEngine'
 import {
   applyAnswer,
   createRun,
@@ -23,12 +24,37 @@ type Stage = 'pick' | 'quiz' | 'fight' | 'result'
 const ARENAS = ['neon-colosseum', 'void-rift', 'storm-spire', 'ember-crater', 'crystal-arena'] as const
 
 const TYPE_LABEL: Record<Question['type'], string> = {
-  compare: 'Compare Powers',
-  identify: 'Identify Expression',
-  predict: 'Who Wins?',
-  evaluate: 'Square / Cube Value',
-  squareCubeCompare: 'Square vs Cube',
-  identifyValue: 'Identify Square/Cube',
+  stronger: 'Who is Stronger?',
+  weaker: 'Who is Weaker?',
+  evaluate: 'Square / Cube',
+}
+
+function HeroPowerLabel({
+  hero,
+  tone,
+  showValue,
+}: {
+  hero: Hero
+  tone: 'sky' | 'rose' | 'amber'
+  showValue: boolean
+}) {
+  const toneClass =
+    tone === 'sky'
+      ? 'text-sky-100'
+      : tone === 'rose'
+        ? 'text-rose-100'
+        : 'text-amber-100'
+  return (
+    <div className={`mt-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] ${toneClass}`}>
+      <MathExpression
+        base={hero.base}
+        exponent={hero.exponent}
+        power={showValue ? calculateTruePower(hero.base, hero.exponent) : undefined}
+        showPower={showValue}
+        size="xl"
+      />
+    </div>
+  )
 }
 
 export function QuestionMode() {
@@ -100,7 +126,6 @@ export function QuestionMode() {
 
   useEffect(() => {
     if (stage !== 'quiz' || !question) return
-    // Soft cue when a new prompt appears
     playFightCue('blast')
   }, [stage, question?.id])
 
@@ -120,9 +145,8 @@ export function QuestionMode() {
           <p className="text-[11px] uppercase tracking-[0.4em] text-amber-400/80">Quiz → Clash</p>
           <h1 className="font-display text-2xl tracking-widest text-amber-200 sm:text-4xl">QUESTION MODE</h1>
           <p className="mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
-            Answer with true math (n⁰ = 1 — so 5⁰ equals 1⁵). Includes squares & cubes (What is 6²? Which is
-            larger: 4² or 2³?). Correct answers charge your champion; misses feed the rival. Then a short fight
-            proves the numbers.
+            Three question types: who is stronger, who is weaker, or what is a square/cube (e.g. 6² / 3³).
+            True math only (n⁰ = 1). Correct answers charge your champion; misses feed the rival.
           </p>
         </div>
         {run && champion && (
@@ -130,8 +154,14 @@ export function QuestionMode() {
             <HeroArt hero={champion} size={56} animated={stage === 'quiz'} />
             <div className="text-left text-xs sm:text-sm">
               <div className="font-display tracking-wide text-sky-200">{champion.name}</div>
-              <div className="text-slate-400">
-                <MathExpression base={champion.base} exponent={champion.exponent} power={champion.power} showPower />
+              <div className="text-sky-100">
+                <MathExpression
+                  base={champion.base}
+                  exponent={champion.exponent}
+                  power={calculateTruePower(champion.base, champion.exponent)}
+                  showPower
+                  size="lg"
+                />
               </div>
               <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-300">
                 <span className="inline-flex items-center gap-1">
@@ -180,8 +210,14 @@ export function QuestionMode() {
                     <div className="mt-2 font-display text-xs tracking-wide text-slate-200 group-hover:text-amber-100">
                       {hero.name}
                     </div>
-                    <div className="text-[11px] text-slate-400">
-                      <MathExpression base={hero.base} exponent={hero.exponent} />
+                    <div className="mt-1 text-sky-100">
+                      <MathExpression
+                        base={hero.base}
+                        exponent={hero.exponent}
+                        power={calculateTruePower(hero.base, hero.exponent)}
+                        showPower
+                        size="lg"
+                      />
                     </div>
                   </button>
                 ))}
@@ -191,7 +227,7 @@ export function QuestionMode() {
                 <Link to="/gallery" className="text-sky-400 hover:text-sky-300">
                   Heroes
                 </Link>
-                . Learning Mode and 2 Player are unchanged.
+                . Power, Expand, and 2 Player are unchanged.
               </p>
             </div>
           </motion.section>
@@ -216,45 +252,36 @@ export function QuestionMode() {
 
               <div className="grid gap-4 p-4 sm:grid-cols-[1fr_1.1fr] sm:p-6">
                 <div className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-black/30 p-4">
-                  {question.type === 'identify' ? (
-                    (() => {
-                      const subject =
-                        HEROES.find((h) => h.id === question.options.find((o) => o.id === 'correct')?.heroId) ??
-                        question.clashA
-                      return (
-                        <>
-                          <HeroArt hero={subject} size={160} animated />
-                          <p className="mt-3 font-display text-lg tracking-wide text-sky-200">{subject.name}</p>
-                          <p className="mt-1 text-center text-xs text-slate-500 italic">{subject.tagline}</p>
-                        </>
-                      )
-                    })()
+                  {question.type === 'evaluate' ? (
+                    <div className="text-center">
+                      <HeroArt hero={question.clashA} size={140} animated />
+                      <p className="mt-2 font-display text-base tracking-wide text-sky-200 sm:text-lg">
+                        {question.clashA.name}
+                      </p>
+                      <HeroPowerLabel hero={question.clashA} tone="amber" showValue={false} />
+                    </div>
                   ) : (
                     <div className="flex w-full items-end justify-around gap-2">
-                      <div className="text-center">
+                      <div className="min-w-0 flex-1 text-center">
                         <HeroArt hero={question.clashA} size={120} animated />
-                        <p className="mt-2 text-xs text-slate-300">{question.clashA.name}</p>
-                        {(question.type === 'compare' || question.type === 'squareCubeCompare') && (
-                          <p className="font-mono text-sky-300">
-                            <MathExpression base={question.clashA.base} exponent={question.clashA.exponent} />
-                          </p>
-                        )}
+                        <p className="mt-2 text-xs font-medium text-slate-200 sm:text-sm">
+                          {question.clashA.name}
+                        </p>
+                        <HeroPowerLabel hero={question.clashA} tone="sky" showValue />
                       </div>
                       <motion.div
-                        className="font-display text-2xl text-rose-400"
+                        className="shrink-0 pb-10 font-display text-2xl text-rose-400 sm:text-3xl"
                         animate={{ scale: [1, 1.15, 1] }}
                         transition={{ duration: 1.2, repeat: Infinity }}
                       >
                         VS
                       </motion.div>
-                      <div className="text-center">
+                      <div className="min-w-0 flex-1 text-center">
                         <HeroArt hero={question.clashB} size={120} animated />
-                        <p className="mt-2 text-xs text-slate-300">{question.clashB.name}</p>
-                        {(question.type === 'compare' || question.type === 'squareCubeCompare') && (
-                          <p className="font-mono text-rose-300">
-                            <MathExpression base={question.clashB.base} exponent={question.clashB.exponent} />
-                          </p>
-                        )}
+                        <p className="mt-2 text-xs font-medium text-slate-200 sm:text-sm">
+                          {question.clashB.name}
+                        </p>
+                        <HeroPowerLabel hero={question.clashB} tone="rose" showValue />
                       </div>
                     </div>
                   )}
@@ -322,6 +349,7 @@ export function QuestionMode() {
               arena={arena}
               compact
               hideReplay
+              largeMath
               onComplete={onFightComplete}
             />
 
@@ -332,7 +360,7 @@ export function QuestionMode() {
                 className="rounded-2xl border border-sky-400/25 bg-black/55 p-4 sm:p-5"
               >
                 <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Math truth</p>
-                <p className="mt-2 font-mono text-sky-200">{question.teach}</p>
+                <p className="mt-2 font-mono text-lg text-sky-100 sm:text-xl">{question.teach}</p>
                 {run && (
                   <p className="mt-3 text-sm text-slate-400">
                     Score <span className="text-amber-300">{run.score}</span> · Best streak{' '}

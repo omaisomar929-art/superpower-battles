@@ -1,6 +1,6 @@
 import type { Hero } from '../heroes/types'
 import { HEROES, getHeroByPowerPair, getRandomHeroes } from '../heroes/data'
-import { resolveTrueBattle, type BattleOutcome, type BattleResult } from '../battleEngine'
+import { resolveTrueBattle, type BattleResult } from '../battleEngine'
 import {
   calculateTruePower,
   formatExpression,
@@ -8,13 +8,8 @@ import {
   raiseToPower,
 } from '../mathEngine'
 
-export type QuestionType =
-  | 'compare'
-  | 'identify'
-  | 'predict'
-  | 'evaluate'
-  | 'squareCubeCompare'
-  | 'identifyValue'
+/** Only these three kinds appear in Question Mode. */
+export type QuestionType = 'stronger' | 'weaker' | 'evaluate'
 
 export interface QuestionOption {
   id: string
@@ -111,28 +106,27 @@ function truePowerOf(hero: Hero): number {
   return calculateTruePower(hero.base, hero.exponent)
 }
 
-/** Pick two heroes; optionally prefer different or equal true mathematical powers. */
-function pickDistinctPair(mode: 'any' | 'different' | 'equal' = 'different'): [Hero, Hero] {
-  if (mode === 'equal') {
-    const equal = pickEqualTruePowerPair()
-    if (equal) return equal
-  }
-
-  for (let attempt = 0; attempt < 40; attempt += 1) {
+/**
+ * Pick two heroes with different true mathematical powers (n⁰ = 1).
+ * Stronger/weaker questions never use equal pairs so the answer is unambiguous.
+ */
+function pickUnequalPair(): [Hero, Hero] {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
     const [a, b] = getRandomHeroes(2)
     if (!a || !b) break
-    if (mode === 'any') return [a, b]
-    const same = truePowerOf(a) === truePowerOf(b)
-    if (mode === 'different' && !same) return [a, b]
-    if (mode === 'equal' && same) return [a, b]
+    if (truePowerOf(a) !== truePowerOf(b)) return [a, b]
   }
 
-  if (mode === 'equal') {
-    const fallback = pickEqualTruePowerPair()
-    if (fallback) return fallback
-  }
-
+  // Deterministic fallback: walk shuffled roster for first unequal pair
   const pool = shuffle(HEROES)
+  for (let i = 0; i < pool.length; i += 1) {
+    for (let j = i + 1; j < pool.length; j += 1) {
+      const a = pool[i]!
+      const b = pool[j]!
+      if (truePowerOf(a) !== truePowerOf(b)) return [a, b]
+    }
+  }
+
   return [pool[0]!, pool[1]!]
 }
 
@@ -152,60 +146,28 @@ export function pickEqualTruePowerPair(): [Hero, Hero] | null {
   return [picked[0]!, picked[1]!]
 }
 
-function decoyExpressions(hero: Hero, count: number): string[] {
-  const seen = new Set<string>([hero.expression])
-  const out: string[] = []
-  const pool = shuffle(HEROES)
-  for (const candidate of pool) {
-    if (seen.has(candidate.expression)) continue
-    seen.add(candidate.expression)
-    out.push(candidate.expression)
-    if (out.length >= count) break
-  }
-  return out
-}
-
-function outcomeLabel(winner: BattleOutcome, a: Hero, b: Hero): string {
-  if (winner === 'draw') return 'Draw — equal power'
-  if (winner === 'a') return a.name
-  return b.name
-}
-
-/**
- * Compare uses true math (n⁰ = 1). Includes an Equal option so void-vs-unit
- * pairs like 5⁰ vs 1⁵ grade as equal — not “void is weaker.”
- */
-export function generateCompareQuestion(forceEqual = false): Question {
-  const wantEqual = forceEqual || Math.random() < 0.28
-  const [left, right] = pickDistinctPair(wantEqual ? 'equal' : 'different')
+/** Who is stronger? Unequal true powers only — no Equal choice. */
+export function generateStrongerQuestion(): Question {
+  const [left, right] = pickUnequalPair()
   const battle = resolveTrueBattle(left, right)
   const leftOpt: QuestionOption = {
     id: 'left',
-    label: left.expression,
+    label: left.name,
     heroId: left.id,
   }
   const rightOpt: QuestionOption = {
     id: 'right',
-    label: right.expression,
+    label: right.name,
     heroId: right.id,
   }
-  const equalOpt: QuestionOption = {
-    id: 'equal',
-    label: 'Equal',
-  }
-  const options = shuffle([leftOpt, rightOpt, equalOpt])
-  const correctOptionIds =
-    battle.winner === 'draw'
-      ? ['equal']
-      : battle.winner === 'a'
-        ? [leftOpt.id]
-        : [rightOpt.id]
+  const options = shuffle([leftOpt, rightOpt])
+  const correctOptionIds = battle.winner === 'a' ? [leftOpt.id] : [rightOpt.id]
 
   return {
-    id: `compare-${left.id}-${right.id}-${Date.now()}`,
-    type: 'compare',
-    prompt: 'Which power is stronger?',
-    hint: 'Use real math: n⁰ = 1. Equal values → pick Equal.',
+    id: `stronger-${left.id}-${right.id}-${Date.now()}`,
+    type: 'stronger',
+    prompt: 'Who is stronger?',
+    hint: 'True math: n⁰ = 1. Compare the values under each hero.',
     options,
     correctOptionIds,
     clashA: left,
@@ -215,60 +177,41 @@ export function generateCompareQuestion(forceEqual = false): Question {
   }
 }
 
-export function generateIdentifyQuestion(champion: Hero): Question {
-  const subjectPool = shuffle(HEROES.filter((h) => h.id !== champion.id))
-  const subject = subjectPool[0] ?? champion
-  const rival = subjectPool[1] ?? getRandomHeroes(1, [subject.id])[0]!
-  const battle = resolveTrueBattle(champion, rival)
-
-  const correct: QuestionOption = {
-    id: 'correct',
-    label: subject.expression,
-    heroId: subject.id,
-  }
-  const decoys = decoyExpressions(subject, 3).map((expr, i) => ({
-    id: `decoy-${i}`,
-    label: expr,
-  }))
-  const options = shuffle([correct, ...decoys])
-
-  return {
-    id: `identify-${subject.id}-${Date.now()}`,
-    type: 'identify',
-    prompt: `What is ${subject.name}'s power expression?`,
-    hint: `${subject.name} fights as base^exponent. Pick the matching notation.`,
-    options,
-    correctOptionIds: [correct.id],
-    clashA: champion,
-    clashB: rival,
-    battle,
-    teach: `${subject.name} is ${formatExpression(subject.base, subject.exponent)} = ${truePowerOf(subject).toLocaleString('en-US')} (true math).`,
-  }
-}
-
-export function generatePredictQuestion(forceEqual = false): Question {
-  const wantEqual = forceEqual || Math.random() < 0.22
-  const [left, right] = pickDistinctPair(wantEqual ? 'equal' : 'any')
+/** Who is weaker? Unequal true powers only — no Equal choice. */
+export function generateWeakerQuestion(): Question {
+  const [left, right] = pickUnequalPair()
   const battle = resolveTrueBattle(left, right)
-  const options: QuestionOption[] = shuffle([
-    { id: 'a', label: left.name, heroId: left.id },
-    { id: 'b', label: right.name, heroId: right.id },
-    { id: 'draw', label: 'Draw' },
-  ])
-  const correctId = battle.winner === 'draw' ? 'draw' : battle.winner === 'a' ? 'a' : 'b'
+  const leftOpt: QuestionOption = {
+    id: 'left',
+    label: left.name,
+    heroId: left.id,
+  }
+  const rightOpt: QuestionOption = {
+    id: 'right',
+    label: right.name,
+    heroId: right.id,
+  }
+  const options = shuffle([leftOpt, rightOpt])
+  // Weaker = the non-winner when powers differ (never draw by construction)
+  const correctOptionIds = battle.winner === 'a' ? [rightOpt.id] : [leftOpt.id]
 
   return {
-    id: `predict-${left.id}-${right.id}-${Date.now()}`,
-    type: 'predict',
-    prompt: 'Who wins this matchup?',
-    hint: 'Predict from true math (n⁰ = 1) before the clash reveals the truth.',
+    id: `weaker-${left.id}-${right.id}-${Date.now()}`,
+    type: 'weaker',
+    prompt: 'Who is weaker?',
+    hint: 'True math: n⁰ = 1. The smaller value is weaker.',
     options,
-    correctOptionIds: [correctId],
+    correctOptionIds,
     clashA: left,
     clashB: right,
     battle,
-    teach: `${battle.explanation} → ${outcomeLabel(battle.winner, left, right)}`,
+    teach: battle.explanation,
   }
+}
+
+/** @deprecated Use generateStrongerQuestion — kept as alias for older imports. */
+export function generateCompareQuestion(_forceEqual = false): Question {
+  return generateStrongerQuestion()
 }
 
 /** What is n² / n³? Numeric multiple choice with true math. */
@@ -329,136 +272,13 @@ export function generateEvaluateQuestion(): Question {
   }
 }
 
-/** Which is larger: a² or b³? (or Equal). */
-export function generateSquareCubeCompareQuestion(): Question {
-  const leftExp = Math.random() < 0.5 ? 2 : 3
-  const rightExp = leftExp === 2 ? 3 : 2
-  const leftBase = leftExp === 2 ? [2, 3, 4, 5, 6, 7, 8][Math.floor(Math.random() * 7)]! : [2, 3, 4, 5][Math.floor(Math.random() * 4)]!
-  const rightBase =
-    rightExp === 2
-      ? [2, 3, 4, 5, 6, 7, 8][Math.floor(Math.random() * 7)]!
-      : [2, 3, 4, 5][Math.floor(Math.random() * 4)]!
-
-  const leftVal = raiseToPower(leftBase, leftExp)
-  const rightVal = raiseToPower(rightBase, rightExp)
-  const leftExpr = formatExpression(leftBase, leftExp)
-  const rightExpr = formatExpression(rightBase, rightExp)
-
-  const leftHero =
-    getHeroByPowerPair(leftBase, leftExp) ??
-    HEROES.find((h) => h.exponent === leftExp)!
-  const rightHero =
-    getHeroByPowerPair(rightBase, rightExp) ??
-    HEROES.find((h) => h.exponent === rightExp && h.id !== leftHero.id) ??
-    getRandomHeroes(1, [leftHero.id])[0]!
-  const battle = resolveTrueBattle(leftHero, rightHero)
-
-  const leftOpt: QuestionOption = { id: 'left', label: leftExpr, heroId: leftHero.id }
-  const rightOpt: QuestionOption = { id: 'right', label: rightExpr, heroId: rightHero.id }
-  const equalOpt: QuestionOption = { id: 'equal', label: 'Equal' }
-  const options = shuffle([leftOpt, rightOpt, equalOpt])
-
-  let correctOptionIds: string[]
-  let teach: string
-  if (leftVal > rightVal) {
-    correctOptionIds = ['left']
-    teach = `${leftExpr}=${leftVal} > ${rightExpr}=${rightVal}`
-  } else if (rightVal > leftVal) {
-    correctOptionIds = ['right']
-    teach = `${rightExpr}=${rightVal} > ${leftExpr}=${leftVal}`
-  } else {
-    correctOptionIds = ['equal']
-    teach = `${leftExpr}=${leftVal} = ${rightExpr}=${rightVal}`
-  }
-
-  return {
-    id: `sqcube-${leftBase}-${leftExp}-${rightBase}-${rightExp}-${Date.now()}`,
-    type: 'squareCubeCompare',
-    prompt: `Which is larger: ${leftExpr} or ${rightExpr}?`,
-    hint: 'Evaluate each square/cube, then compare. Equal values → pick Equal.',
-    options,
-    correctOptionIds,
-    clashA: leftHero,
-    clashB: rightHero,
-    battle,
-    teach,
-  }
-}
-
-/** Identify which expression equals a square or cube value (e.g. 64). */
-export function generateIdentifyValueQuestion(): Question {
-  const exponent = Math.random() < 0.5 ? 2 : 3
-  const basePool = exponent === 2 ? [2, 3, 4, 5, 6, 7, 8, 9, 10] : [2, 3, 4, 5]
-  const base = basePool[Math.floor(Math.random() * basePool.length)]!
-  const value = raiseToPower(base, exponent)
-  const correctExpr = formatExpression(base, exponent)
-
-  const decoys: string[] = []
-  const seen = new Set([correctExpr])
-  const candidates = shuffle(
-    HEROES.filter((h) => h.exponent === 2 || h.exponent === 3).map((h) =>
-      formatExpression(h.base, h.exponent),
-    ),
-  )
-  for (const expr of candidates) {
-    if (seen.has(expr)) continue
-    seen.add(expr)
-    decoys.push(expr)
-    if (decoys.length >= 3) break
-  }
-  while (decoys.length < 3) {
-    const b = 2 + decoys.length
-    const e = decoys.length % 2 === 0 ? 2 : 3
-    const expr = formatExpression(b, e)
-    if (!seen.has(expr)) {
-      seen.add(expr)
-      decoys.push(expr)
-    }
-  }
-
-  const correct: QuestionOption = { id: 'correct', label: correctExpr }
-  const options = shuffle([
-    correct,
-    ...decoys.slice(0, 3).map((label, i) => ({ id: `decoy-${i}`, label })),
-  ])
-
-  const heroA =
-    getHeroByPowerPair(base, exponent) ??
-    HEROES.find((h) => h.exponent === exponent)!
-  const heroB = getRandomHeroes(1, [heroA.id])[0]!
-  const battle = resolveTrueBattle(heroA, heroB)
-
-  return {
-    id: `idval-${base}-${exponent}-${Date.now()}`,
-    type: 'identifyValue',
-    prompt: `Which expression equals ${value.toLocaleString('en-US')}?`,
-    hint: exponent === 2 ? 'Find the matching square.' : 'Find the matching cube.',
-    options,
-    correctOptionIds: ['correct'],
-    clashA: heroA,
-    clashB: heroB,
-    battle,
-    teach: formatPowerExpansion(base, exponent),
-  }
-}
-
-const TYPE_CYCLE: QuestionType[] = [
-  'compare',
-  'identify',
-  'predict',
-  'evaluate',
-  'squareCubeCompare',
-  'identifyValue',
-]
+const TYPE_CYCLE: QuestionType[] = ['stronger', 'weaker', 'evaluate']
 
 export function generateQuestion(state: QuestionRunState, type?: QuestionType): Question {
   const picked = type ?? TYPE_CYCLE[(state.round - 1) % TYPE_CYCLE.length]!
-  if (picked === 'compare') return generateCompareQuestion()
-  if (picked === 'identify') return generateIdentifyQuestion(state.champion)
-  if (picked === 'predict') return generatePredictQuestion()
-  if (picked === 'evaluate') return generateEvaluateQuestion()
-  if (picked === 'squareCubeCompare') return generateSquareCubeCompareQuestion()
-  return generateIdentifyValueQuestion()
+  if (picked === 'stronger') return generateStrongerQuestion()
+  if (picked === 'weaker') return generateWeakerQuestion()
+  return generateEvaluateQuestion()
 }
 
 export function gradeLabel(state: QuestionRunState): string {

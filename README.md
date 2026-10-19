@@ -10,7 +10,7 @@ Pick two of **66 original heroes**:
 - **5 null-base** voids — `0¹`–`0⁵` (power **0**)
 - **11 power-zero void variants** — `0⁰`–`10⁰` with **game power 0** (math would say n⁰=1 for n≠0; these use a void override)
 
-Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), **Power Mode** (squares, cubes, and custom exponents), play **Question Mode** (quiz → clash, including square/cube prompts), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode** grades with *true* math (n⁰ = 1). Equal true powers → Equal / Draw. Never random.
+Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), **Power Mode** (squares, cubes, and custom exponents), play **Question Mode** (stronger / weaker / square-cube quiz → clash), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode** grades with *true* math (n⁰ = 1). Never random.
 
 No video render server. No separate API. Just the site.
 
@@ -50,10 +50,12 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
 1. **Home** → **Question Mode** (or **Question** in the nav / `/question`; `/quiz` redirects)
 2. Pick a champion (or randomize)
-3. Answer rotating question types: **compare powers**, **identify expression**, **who wins**, **square/cube value** (What is 6²?), **square vs cube** (Which is larger: 4² or 2³?), **identify square/cube value**
-4. Comparisons use **true math** (`n⁰ = 1`), so `5⁰` vs `1⁵` is Equal / Draw — not “void is weaker.” Combat void override (game power 0) still applies in Versus / Learning arena only.
+3. Answer rotating types only: **Who is stronger?**, **Who is weaker?**, **What is n² / n³?** (e.g. What is 6²?)
+4. Stronger/weaker always use unequal true powers (no Equal choice). True math: `n⁰ = 1`. Large expression + value labels under heroes (and on the fight strip).
 5. Correct answers charge your side; misses charge the rival — then a short `FightSequence` proves the math
 6. Track score, streak, and grade; **Next Question** or **New Champion**
+
+Power Mode, Expand Mode, and Versus are unchanged.
 
 ## 2 Player (local versus)
 

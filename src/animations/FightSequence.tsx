@@ -24,6 +24,8 @@ interface FightSequenceProps {
   compact?: boolean
   /** Hide the built-in replay button (parent owns next-step CTAs). */
   hideReplay?: boolean
+  /** Bigger, higher-contrast expression + value labels (Question Mode). */
+  largeMath?: boolean
   onComplete?: () => void
 }
 
@@ -53,6 +55,7 @@ export function FightSequence({
   autoStart = true,
   compact = false,
   hideReplay = false,
+  largeMath = false,
   onComplete,
 }: FightSequenceProps) {
   const [phase, setPhase] = useState<FightPhase>(autoStart ? 'introA' : 'idle')
@@ -299,6 +302,8 @@ export function FightSequence({
             highlight={phase === 'introA' || (phase === 'reveal' && result.winner === 'a')}
             dim={phase === 'reveal' && result.winner === 'b'}
             shake={shake}
+            largeMath={largeMath}
+            power={result.powerA}
           />
           <div className="text-center">
             <motion.div
@@ -331,6 +336,8 @@ export function FightSequence({
             highlight={phase === 'introB' || (phase === 'reveal' && result.winner === 'b')}
             dim={phase === 'reveal' && result.winner === 'a'}
             shake={shake}
+            largeMath={largeMath}
+            power={result.powerB}
           />
         </div>
 
@@ -341,14 +348,30 @@ export function FightSequence({
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mx-auto mt-6 max-w-xl rounded-2xl border border-sky-400/30 bg-black/60 p-4 text-center"
+              className={`mx-auto mt-6 max-w-xl rounded-2xl border border-sky-400/30 bg-black/60 text-center ${
+                largeMath ? 'p-5 sm:p-6' : 'p-4'
+              }`}
             >
-              <div className="text-sky-300">
-                <MathExpression base={fighterA.base} exponent={fighterA.exponent} power={result.powerA} showPower />
+              <div className={largeMath ? 'text-sky-100' : 'text-sky-300'}>
+                <MathExpression
+                  base={fighterA.base}
+                  exponent={fighterA.exponent}
+                  power={result.powerA}
+                  showPower
+                  size={largeMath ? 'xl' : 'md'}
+                />
               </div>
-              <div className="my-1 text-slate-500">vs</div>
-              <div className="text-rose-300">
-                <MathExpression base={fighterB.base} exponent={fighterB.exponent} power={result.powerB} showPower />
+              <div className={`my-1 ${largeMath ? 'text-base font-semibold text-slate-300' : 'text-slate-500'}`}>
+                vs
+              </div>
+              <div className={largeMath ? 'text-rose-100' : 'text-rose-300'}>
+                <MathExpression
+                  base={fighterB.base}
+                  exponent={fighterB.exponent}
+                  power={result.powerB}
+                  showPower
+                  size={largeMath ? 'xl' : 'md'}
+                />
               </div>
             </motion.div>
           )}
@@ -408,6 +431,8 @@ function FighterPanel({
   highlight,
   dim,
   shake,
+  largeMath = false,
+  power,
 }: {
   hero: Hero
   fx: ReturnType<typeof getAbilityFx>
@@ -417,6 +442,8 @@ function FighterPanel({
   highlight: boolean
   dim: boolean
   shake: boolean
+  largeMath?: boolean
+  power?: number
 }) {
   const dashAmp = 22 * fx.dashIntensity
   const dashX = side === 'left' ? [0, dashAmp, -dashAmp * 0.35, dashAmp * 0.7, 0] : [0, -dashAmp, dashAmp * 0.35, -dashAmp * 0.7, 0]
@@ -520,8 +547,22 @@ function FighterPanel({
       <div className="mt-2 font-display text-sm sm:text-base" style={{ color: hero.mainColor }}>
         {hero.name}
       </div>
-      <div className="text-xs text-slate-300">
-        <MathExpression base={hero.base} exponent={hero.exponent} />
+      <div
+        className={
+          largeMath
+            ? side === 'left'
+              ? 'mt-1 text-sky-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]'
+              : 'mt-1 text-rose-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]'
+            : 'text-xs text-slate-300'
+        }
+      >
+        <MathExpression
+          base={hero.base}
+          exponent={hero.exponent}
+          power={largeMath ? power : undefined}
+          showPower={largeMath && power !== undefined}
+          size={largeMath ? 'lg' : 'md'}
+        />
       </div>
       <div className="mx-auto mt-2 h-2 max-w-[140px] overflow-hidden rounded-full bg-slate-800">
         <div
