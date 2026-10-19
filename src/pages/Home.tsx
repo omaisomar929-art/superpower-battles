@@ -103,6 +103,9 @@ export function Home() {
           <Link to="/question" className="btn-primary">
             QUESTION MODE
           </Link>
+          <Link to="/villain" className="btn-primary">
+            VILLAIN MODE
+          </Link>
           <Link to="/versus" className="btn-secondary">
             2 PLAYER
           </Link>

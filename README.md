@@ -10,7 +10,7 @@ Pick two of **66 original heroes**:
 - **5 null-base** voids — `0¹`–`0⁵` (power **0**)
 - **11 power-zero void variants** — `0⁰`–`10⁰` with **game power 0** (math would say n⁰=1 for n≠0; these use a void override)
 
-Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), **Power Mode** (squares, cubes, and custom exponents), play **Question Mode** (stronger / weaker / square-cube quiz → clash), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode** grades with *true* math (n⁰ = 1). Never random.
+Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), **Power Mode** (squares, cubes, and custom exponents), play **Question Mode** (stronger / weaker / square-cube quiz → clash), face **Villain Mode / Null Overlord** (grade-6 gauntlet), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode** and Villain quizzes grade with *true* math (n⁰ = 1). Never random.
 
 No video render server. No separate API. Just the site.
 
@@ -51,11 +51,21 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 1. **Home** → **Question Mode** (or **Question** in the nav / `/question`; `/quiz` redirects)
 2. Pick a champion (or randomize)
 3. Answer rotating types only: **Who is stronger?**, **Who is weaker?**, **What is n² / n³?** (e.g. What is 6²?)
-4. Stronger/weaker always use unequal true powers (no Equal choice). True math: `n⁰ = 1`. Large expression + value labels under heroes (and on the fight strip).
+4. Stronger/weaker always use unequal true powers (no Equal choice). True math: `n⁰ = 1`. Large labels under heroes show **only** base^exponent (e.g. `3⁴`) — no computed value.
 5. Correct answers charge your side; misses charge the rival — then a short `FightSequence` proves the math
 6. Track score, streak, and grade; **Next Question** or **New Champion**
 
-Power Mode, Expand Mode, and Versus are unchanged.
+## Villain Mode — Null Overlord (grade 6 gauntlet)
+
+1. **Home** → **VILLAIN MODE** (nav **Villain** / `/villain` or `/null-overlord`)
+2. Pick a champion, then clear three waves:
+   - **Expand the Curse** — choose the correct place-value expansion to break a wrong cursed form → minion fight
+   - **Square / Cube Trap** — evaluate `n²` / `n³` (bases ~2–12) → charge → minion fight
+   - **Stronger / Weaker Duel** — compare two heroes (never equal powers) → boss fight vs **Null Overlord**
+3. Streak / score on correct answers; wrong → Null Drain setback with teaching line, then **Try Again**
+4. Reuses heroes, `FightSequence`, ability VFX, and victory dance
+
+Power Mode, Expand Mode, Versus, and Learning remain unchanged.
 
 ## 2 Player (local versus)
 

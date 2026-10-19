@@ -24,8 +24,13 @@ interface FightSequenceProps {
   compact?: boolean
   /** Hide the built-in replay button (parent owns next-step CTAs). */
   hideReplay?: boolean
-  /** Bigger, higher-contrast expression + value labels (Question Mode). */
+  /** Bigger, higher-contrast base^exponent labels (Question / Villain Mode). */
   largeMath?: boolean
+  /**
+   * When true with largeMath, also show computed = power under fighters / compare box.
+   * Question Mode keeps this false so kids see only e.g. 3⁴.
+   */
+  showPowerValues?: boolean
   onComplete?: () => void
 }
 
@@ -56,6 +61,7 @@ export function FightSequence({
   compact = false,
   hideReplay = false,
   largeMath = false,
+  showPowerValues = false,
   onComplete,
 }: FightSequenceProps) {
   const [phase, setPhase] = useState<FightPhase>(autoStart ? 'introA' : 'idle')
@@ -303,6 +309,7 @@ export function FightSequence({
             dim={phase === 'reveal' && result.winner === 'b'}
             shake={shake}
             largeMath={largeMath}
+            showPowerValues={showPowerValues}
             power={result.powerA}
           />
           <div className="text-center">
@@ -337,6 +344,7 @@ export function FightSequence({
             dim={phase === 'reveal' && result.winner === 'a'}
             shake={shake}
             largeMath={largeMath}
+            showPowerValues={showPowerValues}
             power={result.powerB}
           />
         </div>
@@ -357,7 +365,7 @@ export function FightSequence({
                   base={fighterA.base}
                   exponent={fighterA.exponent}
                   power={result.powerA}
-                  showPower
+                  showPower={!largeMath || showPowerValues}
                   size={largeMath ? 'xl' : 'md'}
                 />
               </div>
@@ -369,7 +377,7 @@ export function FightSequence({
                   base={fighterB.base}
                   exponent={fighterB.exponent}
                   power={result.powerB}
-                  showPower
+                  showPower={!largeMath || showPowerValues}
                   size={largeMath ? 'xl' : 'md'}
                 />
               </div>
@@ -432,6 +440,7 @@ function FighterPanel({
   dim,
   shake,
   largeMath = false,
+  showPowerValues = false,
   power,
 }: {
   hero: Hero
@@ -443,6 +452,7 @@ function FighterPanel({
   dim: boolean
   shake: boolean
   largeMath?: boolean
+  showPowerValues?: boolean
   power?: number
 }) {
   const dashAmp = 22 * fx.dashIntensity
@@ -559,8 +569,8 @@ function FighterPanel({
         <MathExpression
           base={hero.base}
           exponent={hero.exponent}
-          power={largeMath ? power : undefined}
-          showPower={largeMath && power !== undefined}
+          power={largeMath && showPowerValues ? power : undefined}
+          showPower={Boolean(largeMath && showPowerValues && power !== undefined)}
           size={largeMath ? 'lg' : 'md'}
         />
       </div>

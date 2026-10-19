@@ -8,7 +8,6 @@ import { HeroArt } from '../heroes/HeroArt'
 import { MathExpression } from '../components/MathExpression'
 import { FightSequence } from '../animations/FightSequence'
 import { playFightCue } from '../audio/soundEngine'
-import { calculateTruePower } from '../mathEngine'
 import {
   applyAnswer,
   createRun,
@@ -29,14 +28,13 @@ const TYPE_LABEL: Record<Question['type'], string> = {
   evaluate: 'Square / Cube',
 }
 
+/** Question Mode fighter labels: base + exponent only (no computed power). */
 function HeroPowerLabel({
   hero,
   tone,
-  showValue,
 }: {
   hero: Hero
   tone: 'sky' | 'rose' | 'amber'
-  showValue: boolean
 }) {
   const toneClass =
     tone === 'sky'
@@ -46,13 +44,7 @@ function HeroPowerLabel({
         : 'text-amber-100'
   return (
     <div className={`mt-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] ${toneClass}`}>
-      <MathExpression
-        base={hero.base}
-        exponent={hero.exponent}
-        power={showValue ? calculateTruePower(hero.base, hero.exponent) : undefined}
-        showPower={showValue}
-        size="xl"
-      />
+      <MathExpression base={hero.base} exponent={hero.exponent} size="xl" />
     </div>
   )
 }
@@ -155,13 +147,7 @@ export function QuestionMode() {
             <div className="text-left text-xs sm:text-sm">
               <div className="font-display tracking-wide text-sky-200">{champion.name}</div>
               <div className="text-sky-100">
-                <MathExpression
-                  base={champion.base}
-                  exponent={champion.exponent}
-                  power={calculateTruePower(champion.base, champion.exponent)}
-                  showPower
-                  size="lg"
-                />
+                <MathExpression base={champion.base} exponent={champion.exponent} size="lg" />
               </div>
               <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-300">
                 <span className="inline-flex items-center gap-1">
@@ -211,13 +197,7 @@ export function QuestionMode() {
                       {hero.name}
                     </div>
                     <div className="mt-1 text-sky-100">
-                      <MathExpression
-                        base={hero.base}
-                        exponent={hero.exponent}
-                        power={calculateTruePower(hero.base, hero.exponent)}
-                        showPower
-                        size="lg"
-                      />
+                      <MathExpression base={hero.base} exponent={hero.exponent} size="lg" />
                     </div>
                   </button>
                 ))}
@@ -258,7 +238,7 @@ export function QuestionMode() {
                       <p className="mt-2 font-display text-base tracking-wide text-sky-200 sm:text-lg">
                         {question.clashA.name}
                       </p>
-                      <HeroPowerLabel hero={question.clashA} tone="amber" showValue={false} />
+                      <HeroPowerLabel hero={question.clashA} tone="amber" />
                     </div>
                   ) : (
                     <div className="flex w-full items-end justify-around gap-2">
@@ -267,7 +247,7 @@ export function QuestionMode() {
                         <p className="mt-2 text-xs font-medium text-slate-200 sm:text-sm">
                           {question.clashA.name}
                         </p>
-                        <HeroPowerLabel hero={question.clashA} tone="sky" showValue />
+                        <HeroPowerLabel hero={question.clashA} tone="sky" />
                       </div>
                       <motion.div
                         className="shrink-0 pb-10 font-display text-2xl text-rose-400 sm:text-3xl"
@@ -281,7 +261,7 @@ export function QuestionMode() {
                         <p className="mt-2 text-xs font-medium text-slate-200 sm:text-sm">
                           {question.clashB.name}
                         </p>
-                        <HeroPowerLabel hero={question.clashB} tone="rose" showValue />
+                        <HeroPowerLabel hero={question.clashB} tone="rose" />
                       </div>
                     </div>
                   )}

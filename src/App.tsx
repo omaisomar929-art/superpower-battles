@@ -9,6 +9,7 @@ import { Versus } from './pages/Versus'
 import { QuestionMode } from './pages/QuestionMode'
 import { ExpandMode } from './pages/ExpandMode'
 import { PowerMode } from './pages/PowerMode'
+import { VillainMode } from './pages/VillainMode'
 
 export default function App() {
   return (
@@ -27,6 +28,8 @@ export default function App() {
             <Route path="arena" element={<Arena />} />
             <Route path="versus" element={<Versus />} />
             <Route path="question" element={<QuestionMode />} />
+            <Route path="villain" element={<VillainMode />} />
+            <Route path="null-overlord" element={<VillainMode />} />
             <Route path="quiz" element={<Navigate to="/question" replace />} />
             <Route path="multiplayer" element={<Navigate to="/versus" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />

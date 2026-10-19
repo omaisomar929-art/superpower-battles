@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Swords, Users, Home, Volume2, VolumeX, Gamepad2, HelpCircle, Zap } from 'lucide-react'
+import { Swords, Users, Home, Volume2, VolumeX, Gamepad2, HelpCircle, Zap, Skull } from 'lucide-react'
 import { useSound } from '../audio/SoundProvider'
 import { TOTAL_HERO_COUNT } from '../heroes/data'
 
@@ -10,6 +10,7 @@ const links = [
   { to: '/learning/power', label: 'Power', icon: Zap },
   { to: '/versus', label: '2 Player', icon: Gamepad2 },
   { to: '/question', label: 'Question', icon: HelpCircle },
+  { to: '/villain', label: 'Villain', icon: Skull },
 ]
 
 export function Layout() {
