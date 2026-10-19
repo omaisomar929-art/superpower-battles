@@ -652,3 +652,101 @@ export function playVictoryStinger(hero: Hero): void {
     tone(midiOffsetToHz(profile.rootHz, 12), 0.45, 'triangle', resolveGain * 0.4, resolveAt + 0.06)
   }
 }
+
+/* ─── Evil victory stinger (procedural, per-villain) ─────────────────── */
+
+export interface EvilStingerProfile {
+  bpm: number
+  rootHz: number
+  mode: ScaleMode
+  oscType: OscillatorType
+  noteCount: number
+  durationSec: number
+  darkness: number
+  seed: number
+}
+
+/** Dark, descending stinger profile seeded by villain identity. */
+export function getEvilStingerProfile(villain: Hero): EvilStingerProfile {
+  const seed = hashStr(`evil:${villain.id}`)
+  const main = rgbToHsl(
+    parseHex(villain.mainColor).r,
+    parseHex(villain.mainColor).g,
+    parseHex(villain.mainColor).b,
+  )
+  const sec = rgbToHsl(
+    parseHex(villain.secondaryColor).r,
+    parseHex(villain.secondaryColor).g,
+    parseHex(villain.secondaryColor).b,
+  )
+
+  // Evil stingers are slower and darker than hero fanfares.
+  const bpm = Math.round(Math.min(118, Math.max(54, 62 + (1 - main.l) * 28 + (seed % 22))))
+  const rootHz = 48 + (1 - main.l) * 36 + (seed % 18) + sec.h * 0.04
+  const noteCount = 5 + (seed % 5)
+  const durationSec = 1.4 + ((seed % 8) / 10) + (1 - main.l) * 0.6
+  const modes: ScaleMode[] = ['chromatic-dark', 'minor', 'chromatic-dark', 'whole']
+  const oscTypes: OscillatorType[] = ['sawtooth', 'square', 'triangle', 'sine']
+
+  return {
+    bpm,
+    rootHz,
+    mode: modes[seed % modes.length]!,
+    oscType: oscTypes[(seed >> 3) % oscTypes.length]!,
+    noteCount,
+    durationSec: Math.min(3.2, durationSec),
+    darkness: Math.min(1, 0.45 + (1 - main.l) * 0.45 + ((seed % 10) / 40)),
+    seed,
+  }
+}
+
+/**
+ * Play an original procedural evil victory stinger unique to this villain.
+ * Descending / dissonant — mirrors hero victory stingers but dark-themed.
+ */
+export function playEvilVictoryStinger(villain: Hero): void {
+  if (muted) return
+  const profile = getEvilStingerProfile(villain)
+  const t0 = now()
+  const ctx = getCtx()
+  if (ctx.state === 'suspended') void ctx.resume()
+
+  duckBgm(profile.durationSec)
+
+  const beat = 60 / profile.bpm
+  const scale = SCALES[profile.mode]
+  const seed = profile.seed
+
+  // Opening void drone + scrape
+  playDrone(profile.rootHz * 0.5, t0, 0.06 + profile.darkness * 0.04, profile.durationSec * 0.9)
+  noiseBurst(0.22, 0.07 + profile.darkness * 0.04, t0, 180 + profile.darkness * 120)
+  tone(profile.rootHz * 0.75, 0.35, 'sawtooth', 0.045, t0, 220)
+
+  // Descending motif (evil mirror of rising hero fanfare)
+  for (let i = 0; i < profile.noteCount; i += 1) {
+    const deg = scale[(seed + i * 5) % scale.length]!
+    const drop = -Math.floor(i * 1.4) - ((seed >> (i % 6)) & 1)
+    const freq = midiOffsetToHz(profile.rootHz, deg + drop)
+    const when = t0 + 0.1 + i * beat * (0.5 + ((seed >> (i % 8)) & 1) * 0.1)
+    const dur = beat * (0.6 + (i % 2) * 0.2) + (i === profile.noteCount - 1 ? 0.4 : 0)
+    const gain =
+      (0.03 + profile.darkness * 0.03) *
+      (i === profile.noteCount - 1 ? 1.3 : 1) *
+      (profile.oscType === 'sawtooth' || profile.oscType === 'square' ? 0.7 : 1)
+
+    tone(freq, dur, profile.oscType, gain, when, 320 + profile.darkness * 400)
+
+    if (i % 2 === 0) {
+      const dissonance = midiOffsetToHz(profile.rootHz, deg + drop + 1)
+      tone(dissonance, dur * 0.7, 'triangle', gain * 0.35, when + 0.02, 500)
+    }
+  }
+
+  // Closing sink — unresolved low cluster
+  const resolveAt = t0 + profile.durationSec * 0.7
+  const g = 0.04 + profile.darkness * 0.03
+  tone(profile.rootHz * 0.5, 0.7, 'sine', g, resolveAt, 180)
+  tone(profile.rootHz * 0.55, 0.55, 'triangle', g * 0.7, resolveAt + 0.04, 220)
+  tone(midiOffsetToHz(profile.rootHz, 1), 0.45, 'sawtooth', g * 0.45, resolveAt + 0.08, 280)
+  noiseBurst(0.35, 0.05, resolveAt + 0.1, 140)
+}

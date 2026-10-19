@@ -55,17 +55,21 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 5. Correct answers charge your side; misses charge the rival — then a short `FightSequence` proves the math
 6. Track score, streak, and grade; **Next Question** or **New Champion**
 
-## Villain Mode — Null Overlord (grade 6 gauntlet)
+## Villain Mode (grade 6 gauntlet)
 
 1. **Home** → **VILLAIN MODE** (nav **Villain** / `/villain` or `/null-overlord`)
-2. Pick a champion, then clear three waves:
-   - **Expand the Curse** — choose the correct place-value expansion to break a wrong cursed form → minion fight
-   - **Square / Cube Trap** — evaluate `n²` / `n³` (bases ~2–12) → charge → minion fight
-   - **Stronger / Weaker Duel** — compare two heroes (never equal powers) → boss fight vs **Null Overlord**
-3. Streak / score on correct answers; wrong → Null Drain setback with teaching line, then **Try Again**
-4. Reuses heroes, `FightSequence`, ability VFX, and victory dance
+2. **Choose a villain by difficulty** (unique original bosses — not copyrighted IPs):
+   - **Easy — Gloom Glyph** — simpler expanded forms, small squares/cubes, clear compares
+   - **Medium — Hex Hollow** — harder numbers, trickier compares
+   - **Hard — Null Overlord** — larger powers, multi-step, closer values
+   - **UltraHard — Abyss Architect** — toughest grade-6 stretch (still fair)
+3. Pick a champion, then clear three waves (content tuned to the chosen difficulty):
+   - **Expand the Curse** → minion fight
+   - **Square / Cube Trap** → charge → minion fight
+   - **Stronger / Weaker Duel** → boss fight vs your chosen villain
+4. Correct → score/streak + fight (hero victory dance on gauntlet clear). Wrong → villain **evil victory dance** + seeded dark Web Audio stinger, teach line, **Try Again**
 
-Power Mode, Expand Mode, Versus, and Learning remain unchanged.
+Power Mode, Expand Mode, Versus, Question Mode, and Learning remain unchanged.
 
 ## 2 Player (local versus)
 

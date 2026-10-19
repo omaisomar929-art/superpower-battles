@@ -6,8 +6,15 @@ import { HeroArt } from '../heroes/HeroArt'
 import type { Hero } from '../heroes/types'
 import { MathExpression } from '../components/MathExpression'
 import { FightSequence } from '../animations/FightSequence'
-import { playFightCue } from '../audio/soundEngine'
-import { ensureChampionCanClash, NULL_OVERLORD, pickChampionPool } from '../villainMode/cast'
+import { EvilVictoryDance } from '../animations/EvilVictoryDance'
+import { VictoryDance } from '../animations/VictoryDance'
+import { playEvilVictoryStinger, playFightCue, playVictoryStinger } from '../audio/soundEngine'
+import {
+  VILLAINS,
+  ensureChampionCanClash,
+  pickChampionPool,
+  type VillainProfile,
+} from '../villainMode/cast'
 import {
   applyVillainAnswer,
   createVillainRun,
@@ -19,12 +26,13 @@ import {
   type VillainRunState,
 } from '../villainMode/villainEngine'
 
-type Stage = 'intro' | 'pick' | 'quiz' | 'fight' | 'cleared' | 'setback' | 'victory'
+type Stage = 'select' | 'pick' | 'quiz' | 'fight' | 'cleared' | 'setback' | 'victory'
 
 const ARENAS = ['void-rift', 'neon-colosseum', 'storm-spire', 'crystal-arena', 'ember-crater'] as const
 
 export function VillainMode() {
-  const [stage, setStage] = useState<Stage>('intro')
+  const [stage, setStage] = useState<Stage>('select')
+  const [villain, setVillain] = useState<VillainProfile | null>(null)
   const [champion, setChampion] = useState<Hero | null>(null)
   const [run, setRun] = useState<VillainRunState | null>(null)
   const [question, setQuestion] = useState<VillainQuestion | null>(null)
@@ -33,19 +41,23 @@ export function VillainMode() {
   const [locked, setLocked] = useState(false)
   const [pickPool] = useState(() => pickChampionPool(8))
 
+  const activeVillain = villain ?? run?.villain ?? null
+
   const arena = useMemo(
     () => ARENAS[((run?.wave ?? 1) - 1) % ARENAS.length]!,
     [run?.wave],
   )
 
-  function beginPick() {
+  function chooseVillain(profile: VillainProfile) {
+    setVillain(profile)
     setStage('pick')
     playFightCue('intro')
   }
 
   function startWith(hero: Hero) {
-    const champ = ensureChampionCanClash(hero)
-    const nextRun = createVillainRun(champ)
+    if (!villain) return
+    const champ = ensureChampionCanClash(hero, villain.hero)
+    const nextRun = createVillainRun(champ, villain)
     setChampion(champ)
     setRun(nextRun)
     setQuestion(generateWaveQuestion(nextRun))
@@ -68,7 +80,10 @@ export function VillainMode() {
       window.setTimeout(() => setStage('fight'), 700)
     } else {
       playFightCue('impact')
-      window.setTimeout(() => setStage('setback'), 650)
+      window.setTimeout(() => {
+        setStage('setback')
+        playEvilVictoryStinger(state.villain.hero)
+      }, 650)
     }
   }
 
@@ -76,7 +91,8 @@ export function VillainMode() {
     if (!run) return
     if (run.complete && run.victory) {
       setStage('victory')
-      playFightCue('reveal')
+      if (champion) playVictoryStinger(champion)
+      else playFightCue('reveal')
       return
     }
     setStage('cleared')
@@ -104,7 +120,8 @@ export function VillainMode() {
   }
 
   function resetGauntlet() {
-    setStage('intro')
+    setStage('select')
+    setVillain(null)
     setChampion(null)
     setRun(null)
     setQuestion(null)
@@ -118,10 +135,17 @@ export function VillainMode() {
     playFightCue('whoosh')
   }, [stage, question?.id])
 
+  const themeGlow = activeVillain?.theme.glow ?? 'rgba(139,92,246,0.22)'
+
   return (
     <div className="relative mx-auto max-w-5xl overflow-hidden px-3 py-4 sm:px-4 sm:py-8">
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(139,92,246,0.22),transparent_55%)]" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(ellipse at 50% 0%, ${themeGlow}, transparent 55%)`,
+          }}
+        />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,rgba(49,46,129,0.35),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_70%,rgba(2,6,23,0.9),transparent_45%)]" />
         <motion.div
@@ -129,13 +153,15 @@ export function VillainMode() {
           animate={{ opacity: [0.2, 0.7, 0.2] }}
           transition={{ duration: 3.4, repeat: Infinity }}
         />
-        <motion.div
-          className="absolute right-4 top-20 opacity-30 sm:right-10"
-          animate={{ y: [0, -10, 0], rotate: [0, 3, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <HeroArt hero={NULL_OVERLORD} size={140} animated />
-        </motion.div>
+        {activeVillain && stage !== 'select' && (
+          <motion.div
+            className="absolute right-4 top-20 opacity-30 sm:right-10"
+            animate={{ y: [0, -10, 0], rotate: [0, 3, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <HeroArt hero={activeVillain.hero} size={140} animated />
+          </motion.div>
+        )}
       </div>
 
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -144,14 +170,15 @@ export function VillainMode() {
             <Skull size={12} /> Grade 6 gauntlet
           </p>
           <h1 className="font-display text-2xl tracking-widest text-violet-100 sm:text-4xl">
-            NULL OVERLORD
+            {activeVillain && stage !== 'select' ? activeVillain.hero.name.toUpperCase() : 'VILLAIN MODE'}
           </h1>
           <p className="mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
-            The villain drains powers toward the void (0). Break the curse, charge squares and cubes, then
-            duel — and face the boss. Kid-friendly, cinematic, true math (n⁰ = 1).
+            {activeVillain && stage !== 'select'
+              ? activeVillain.hero.tagline
+              : 'Choose your foe by difficulty. Break the curse, charge squares and cubes, compare powers — then the boss. Kid-friendly, cinematic, true math (n⁰ = 1).'}
           </p>
         </div>
-        {run && champion && (
+        {run && champion && activeVillain && (
           <div className="flex items-center gap-3 rounded-2xl border border-violet-400/25 bg-black/50 px-3 py-2">
             <HeroArt hero={champion} size={56} animated={stage === 'quiz'} />
             <div className="text-left text-xs sm:text-sm">
@@ -166,6 +193,9 @@ export function VillainMode() {
                 <span className="inline-flex items-center gap-1">
                   <Flame size={12} className="text-orange-400" /> {run.streak}
                 </span>
+                <span className={`rounded px-1.5 py-0.5 ${activeVillain.theme.badge}`}>
+                  {activeVillain.difficultyLabel}
+                </span>
                 <span className="text-violet-300/80">{waveLabel(run.wave)}</span>
               </div>
             </div>
@@ -174,66 +204,102 @@ export function VillainMode() {
       </header>
 
       <AnimatePresence mode="wait">
-        {stage === 'intro' && (
+        {stage === 'select' && (
           <motion.section
-            key="intro"
+            key="select"
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             className="mt-6"
           >
             <div className="overflow-hidden rounded-2xl border border-violet-400/30 bg-black/55 p-5 sm:p-8">
-              <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-                <motion.div
-                  animate={{
-                    scale: [1, 1.04, 1],
-                    filter: ['brightness(1)', 'brightness(1.15)', 'brightness(1)'],
-                  }}
-                  transition={{ duration: 2.8, repeat: Infinity }}
-                >
-                  <HeroArt hero={NULL_OVERLORD} size={180} animated />
-                </motion.div>
-                <div className="flex-1 text-center sm:text-left">
-                  <h2 className="font-display text-xl tracking-widest text-violet-200 sm:text-2xl">
-                    VILLAIN MODE
-                  </h2>
-                  <p className="mt-3 text-slate-300">
-                    Three waves stand between your champion and the Null Overlord. Answer to charge your
-                    hero; miss and the void pushes back — then try again.
-                  </p>
-                  <ol className="mt-5 space-y-2 text-left text-sm text-slate-400">
-                    <li className="flex gap-2">
-                      <ShieldAlert size={16} className="mt-0.5 shrink-0 text-violet-300" />
-                      <span>
-                        <strong className="text-violet-100">Expand the Curse</strong> — fix a wrong
-                        expanded form to crack the shield, then fight a minion.
-                      </span>
-                    </li>
-                    <li className="flex gap-2">
-                      <Zap size={16} className="mt-0.5 shrink-0 text-amber-300" />
-                      <span>
-                        <strong className="text-amber-100">Square / Cube Trap</strong> — solve n² or n³
-                        (bases ~2–12) to charge up and clash again.
-                      </span>
-                    </li>
-                    <li className="flex gap-2">
-                      <Crown size={16} className="mt-0.5 shrink-0 text-sky-300" />
-                      <span>
-                        <strong className="text-sky-100">Stronger / Weaker Duel</strong> — compare two
-                        heroes (never equals), then the final boss fight.
-                      </span>
-                    </li>
-                  </ol>
-                  <button type="button" className="btn-primary mt-6" onClick={beginPick}>
-                    ENTER THE VOID
-                  </button>
-                </div>
+              <div className="text-center sm:text-left">
+                <h2 className="font-display text-xl tracking-widest text-violet-200 sm:text-2xl">
+                  CHOOSE YOUR VILLAIN
+                </h2>
+                <p className="mt-2 max-w-2xl text-slate-300">
+                  Four foes. Four difficulties. Same three waves — expand → square/cube → stronger/weaker
+                  boss fight — tuned harder as you climb.
+                </p>
               </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {VILLAINS.map((profile, index) => (
+                  <motion.button
+                    key={profile.id}
+                    type="button"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.06 }}
+                    onClick={() => chooseVillain(profile)}
+                    className={`group relative overflow-hidden rounded-2xl border ${profile.theme.border} bg-gradient-to-br ${profile.theme.panel} p-4 text-left transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300`}
+                  >
+                    <div
+                      className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full blur-2xl"
+                      style={{ background: profile.theme.glow }}
+                    />
+                    <div className="relative flex gap-4">
+                      <motion.div
+                        animate={{ y: [0, -6, 0] }}
+                        transition={{ duration: 3.2 + index * 0.3, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        <HeroArt hero={profile.hero} size={108} animated />
+                      </motion.div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${profile.theme.badge}`}
+                          >
+                            {profile.difficultyLabel}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                            Tier {index + 1}
+                          </span>
+                        </div>
+                        <h3
+                          className="mt-2 font-display text-lg tracking-wide sm:text-xl"
+                          style={{ color: profile.hero.mainColor }}
+                        >
+                          {profile.hero.name}
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-400 sm:text-sm">{profile.blurb}</p>
+                        <p className="mt-3 text-[11px] uppercase tracking-[0.22em] text-slate-500 group-hover:text-slate-300">
+                          Challenge →
+                        </p>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              <ol className="mt-8 space-y-2 text-left text-sm text-slate-400">
+                <li className="flex gap-2">
+                  <ShieldAlert size={16} className="mt-0.5 shrink-0 text-violet-300" />
+                  <span>
+                    <strong className="text-violet-100">Expand the Curse</strong> — fix a wrong expanded
+                    form, then fight a minion.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <Zap size={16} className="mt-0.5 shrink-0 text-amber-300" />
+                  <span>
+                    <strong className="text-amber-100">Square / Cube Trap</strong> — solve n² or n³ to
+                    charge up.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <Crown size={16} className="mt-0.5 shrink-0 text-sky-300" />
+                  <span>
+                    <strong className="text-sky-100">Stronger / Weaker Duel</strong> — compare two heroes,
+                    then the boss fight.
+                  </span>
+                </li>
+              </ol>
             </div>
           </motion.section>
         )}
 
-        {stage === 'pick' && (
+        {stage === 'pick' && villain && (
           <motion.section
             key="pick"
             initial={{ opacity: 0, y: 12 }}
@@ -241,11 +307,19 @@ export function VillainMode() {
             exit={{ opacity: 0, y: -8 }}
             className="mt-6"
           >
-            <div className="rounded-2xl border border-violet-400/20 bg-black/45 p-4 sm:p-6">
-              <h2 className="font-display text-lg tracking-widest text-sky-200">CHOOSE YOUR CHAMPION</h2>
-              <p className="mt-1 text-sm text-slate-400">
-                Correct answers fuel their next strike against Null Overlord&apos;s minions.
-              </p>
+            <div className={`rounded-2xl border ${villain.theme.border} bg-black/45 p-4 sm:p-6`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-lg tracking-widest text-sky-200">CHOOSE YOUR CHAMPION</h2>
+                  <p className="mt-1 text-sm text-slate-400">
+                    Correct answers fuel strikes against {villain.hero.name} (
+                    {villain.difficultyLabel}).
+                  </p>
+                </div>
+                <button type="button" className="btn-secondary text-xs" onClick={() => setStage('select')}>
+                  CHANGE VILLAIN
+                </button>
+              </div>
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {pickPool.map((hero) => (
                   <button
@@ -268,7 +342,7 @@ export function VillainMode() {
           </motion.section>
         )}
 
-        {stage === 'quiz' && question && (
+        {stage === 'quiz' && question && activeVillain && (
           <motion.section
             key={question.id}
             initial={{ opacity: 0, y: 14 }}
@@ -276,7 +350,7 @@ export function VillainMode() {
             exit={{ opacity: 0, scale: 0.98 }}
             className="mt-6"
           >
-            <div className="overflow-hidden rounded-2xl border border-violet-400/25 bg-slate-950/75">
+            <div className={`overflow-hidden rounded-2xl border ${activeVillain.theme.border} bg-slate-950/75`}>
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3 sm:px-6">
                 <span className="text-[11px] uppercase tracking-[0.28em] text-violet-300/90">
                   {waveLabel(question.wave)} · {question.title}
@@ -300,7 +374,7 @@ export function VillainMode() {
                     </div>
                   ) : question.kind === 'expand' ? (
                     <div className="text-center">
-                      <HeroArt hero={NULL_OVERLORD} size={120} animated />
+                      <HeroArt hero={activeVillain.hero} size={120} animated />
                       <p className="mt-2 font-display text-sm tracking-wide text-violet-200">
                         Curse shield
                       </p>
@@ -351,7 +425,7 @@ export function VillainMode() {
           </motion.section>
         )}
 
-        {stage === 'setback' && question && outcome && (
+        {stage === 'setback' && question && outcome && activeVillain && (
           <motion.section
             key={`setback-${question.id}`}
             initial={{ opacity: 0, y: 10 }}
@@ -362,24 +436,27 @@ export function VillainMode() {
               <div className="flex items-center gap-2 text-sm sm:text-base">
                 <Skull size={16} className="text-rose-300" />
                 <span className="text-rose-100">
-                  Null Drain! The overlord pulls your power toward zero — learning setback, not game over.
+                  {activeVillain.hero.name} wins this round! Evil victory dance — learning setback, not
+                  game over.
                 </span>
               </div>
             </div>
-            <div className="flex justify-center">
-              <motion.div
-                animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
-                transition={{ duration: 1.4, repeat: Infinity }}
-              >
-                <HeroArt hero={NULL_OVERLORD} size={160} animated />
-              </motion.div>
+            <div className="flex justify-center py-2">
+              <EvilVictoryDance
+                villain={activeVillain.hero}
+                style={activeVillain.evilDanceStyle}
+                size={170}
+              />
             </div>
-            <div className="rounded-2xl border border-violet-400/25 bg-black/55 p-4 sm:p-5">
+            <div className={`rounded-2xl border ${activeVillain.theme.border} bg-black/55 p-4 sm:p-5`}>
               <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Math truth</p>
               <p className="mt-2 font-mono text-lg text-sky-100 sm:text-xl">{question.teach}</p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button type="button" className="btn-primary text-xs" onClick={retryWave}>
                   TRY AGAIN
+                </button>
+                <button type="button" className="btn-secondary text-xs" onClick={resetGauntlet}>
+                  PICK NEW VILLAIN
                 </button>
                 <Link to="/" className="btn-secondary text-xs">
                   HOME
@@ -401,7 +478,7 @@ export function VillainMode() {
                 <Sparkles size={16} className="text-emerald-300" />
                 <span className="text-emerald-200">
                   {question.wave === 3
-                    ? 'Shield broken — final clash with Null Overlord!'
+                    ? `Shield broken — final clash with ${activeVillain?.hero.name ?? 'the villain'}!`
                     : 'Correct — your answer charges the next attack.'}
                 </span>
               </div>
@@ -455,7 +532,7 @@ export function VillainMode() {
           </motion.section>
         )}
 
-        {stage === 'victory' && run && champion && (
+        {stage === 'victory' && run && champion && activeVillain && (
           <motion.section
             key="victory"
             initial={{ opacity: 0, scale: 0.96 }}
@@ -465,23 +542,14 @@ export function VillainMode() {
             <div className="rounded-2xl border border-amber-400/40 bg-black/60 p-6 text-center sm:p-8">
               <p className="text-[11px] uppercase tracking-[0.4em] text-amber-400/80">Gauntlet clear</p>
               <h2 className="mt-2 font-display text-2xl tracking-widest text-amber-200 sm:text-3xl">
-                NULL OVERLORD DEFEATED
+                {activeVillain.hero.name.toUpperCase()} DEFEATED
               </h2>
               <div className="mt-6 flex flex-wrap items-end justify-center gap-8">
-                <div>
-                  <HeroArt hero={champion} size={140} animated />
-                  <p className="mt-2 font-display text-sky-200">{champion.name}</p>
-                  <MathExpression
-                    base={champion.base}
-                    exponent={champion.exponent}
-                    size="lg"
-                    className="text-sky-100"
-                  />
-                </div>
+                <VictoryDance hero={champion} size={140} />
                 <span className="font-display text-3xl text-violet-300">VS</span>
                 <div className="opacity-50 grayscale">
-                  <HeroArt hero={NULL_OVERLORD} size={140} />
-                  <p className="mt-2 font-display text-violet-200">{NULL_OVERLORD.name}</p>
+                  <HeroArt hero={activeVillain.hero} size={140} />
+                  <p className="mt-2 font-display text-violet-200">{activeVillain.hero.name}</p>
                 </div>
               </div>
               <p className="mx-auto mt-6 max-w-md text-slate-300">
