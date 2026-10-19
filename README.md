@@ -10,7 +10,7 @@ Pick two of **66 original heroes**:
 - **5 null-base** voids — `0¹`–`0⁵` (power **0**)
 - **11 power-zero void variants** — `0⁰`–`10⁰` with **game power 0** (math would say n⁰=1 for n≠0; these use a void override)
 
-Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), **Power Mode** (squares, cubes, and custom exponents), play **Question Mode** (stronger / weaker / square-cube quiz → clash), face **Villain Mode / Null Overlord** (grade-6 gauntlet), or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode** and Villain quizzes grade with *true* math (n⁰ = 1). Never random.
+Watch a **Learning Mode** cinematic arena fight, practice **Expand Mode** (place-value powers of ten), **Power Mode** (squares, cubes, and custom exponents), play **Question Mode** (stronger / weaker / square-cube quiz → clash), face **Villain Mode / Null Overlord** (grade-6 gauntlet), play **Mini Games** arcade modes, or play **2 Player** local multiplayer (keyboard or phone touch pads). **Arena / Versus:** higher *game* power wins (void n⁰ = 0). **Question Mode**, Villain quizzes, and **Mini Games** grade with *true* math (n⁰ = 1). Never random.
 
 No video render server. No separate API. Just the site.
 
@@ -71,6 +71,23 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
 Power Mode, Expand Mode, Versus, Question Mode, and Learning remain unchanged.
 
+## Mini Games (arcade)
+
+1. **Home** → **MINI GAMES** (nav **Mini Games** / `/minigames`)
+2. Pick a game, then choose **1 Player** or **2 Player**
+3. **1P** — solo score / lives. **2P** — split left/right lanes on one device (touch + optional keyboard: P1 A/D, P2 ←/→)
+
+| Route | Game |
+|---|---|
+| `/minigames/meteor` | **Power Meteor Shower** — tap the stronger expression before impact |
+| `/minigames/cube-comets` | **Cube Comets** — tap true squares or true cubes (wave prompt) |
+| `/minigames/expand-asteroids` | **Expand Asteroids** — pick the correct expanded form before timeout |
+| `/minigames/void-pull` | **Void Black-Hole Pull** — save expressions that equal the target power |
+| `/minigames/laser-lattice` | **Laser Lattice** — pick which beam wins before collide |
+| `/minigames/thunder` | **Thunder Round** — 45s stronger/weaker blitz high score |
+
+Superscript math labels throughout. Site BGM / mute header control unchanged.
+
 ## 2 Player (local versus)
 
 1. **Home** → **2 Player** (or open `/versus`)
@@ -128,5 +145,8 @@ src/animations/      # live arena fight sequence + ability / punch VFX
 src/versus/          # 2P damage rules + controllable arena + touch pads
 src/audio/           # MP3 BGM (from 0:35) + fight SFX
 public/audio/        # original-bg.mp3
-src/pages/           # Home, Gallery, Learning Mode select, Arena, Versus
+src/minigames/       # arcade catalog + pure engines (true math)
+src/pages/           # Home, Gallery, Learning, Arena, Versus, Mini Games
+src/pages/minigames/ # per-game React playfields
 ```
+

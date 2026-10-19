@@ -106,6 +106,9 @@ export function Home() {
           <Link to="/villain" className="btn-primary">
             VILLAIN MODE
           </Link>
+          <Link to="/minigames" className="btn-primary">
+            MINI GAMES
+          </Link>
           <Link to="/versus" className="btn-secondary">
             2 PLAYER
           </Link>
